@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { Item } from '../types';
-import { 
-  Calendar, MapPin, Tag, Award, Eye, 
-  LayoutGrid, List, Flame, AlertCircle 
+import {
+  Calendar, MapPin, Tag, Award, Eye,
+  LayoutGrid, List, AlertCircle, Shield, CheckCircle2, ChevronRight
 } from 'lucide-react';
 
 interface ItemExplorerProps {
@@ -17,6 +17,7 @@ interface ItemExplorerProps {
   setSortBy: (sort: string) => void;
   onSelectItem: (item: Item) => void;
   onCheckMatches: (item: Item) => void;
+  onClaimItem: (item: Item) => void;
 }
 
 const CATEGORIES = [
@@ -40,53 +41,52 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
   sortBy,
   setSortBy,
   onSelectItem,
-  onCheckMatches
+  onCheckMatches,
+  onClaimItem
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Sort items client-side based on user selected sorting
-  const sortedItems = [...items].sort((a, b) => {
-    if (sortBy === 'priority') {
-      return (b.priorityScore || 0) - (a.priorityScore || 0);
-    }
-    if (sortBy === 'date-desc') {
-      return b.date.localeCompare(a.date);
-    }
-    if (sortBy === 'date-asc') {
-      return a.date.localeCompare(b.date);
-    }
-    if (sortBy === 'location') {
-      return a.location.localeCompare(b.location);
-    }
-    return 0;
-  });
-
   return (
-    <div style={{ maxWidth: 1380, margin: '0 auto', padding: '0 24px 60px' }}>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px 60px' }}>
       {/* Filter and Control Bar */}
-      <div className="glass-panel" style={{ padding: '20px 24px', marginBottom: 28 }}>
-        {/* Category Pills */}
+      <div className="card" style={{ padding: '20px 24px', marginBottom: 24, backgroundColor: '#ffffff' }}>
+        {/* Category Filter Pills */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 8,
           overflowX: 'auto',
           paddingBottom: 14,
           borderBottom: '1px solid var(--border-subtle)',
           marginBottom: 16
         }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <Tag size={15} /> Categories:
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <Tag size={15} /> Category:
           </span>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              className={`pill-filter ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat)}
-            >
-              {cat === 'ALL' ? 'All Categories' : cat}
-            </button>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-medium)',
+                  backgroundColor: isSelected ? 'var(--primary)' : '#ffffff',
+                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                  fontSize: '0.82rem',
+                  fontWeight: isSelected ? 700 : 500,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: isSelected ? '0 2px 6px rgba(79, 70, 229, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {cat === 'ALL' ? 'All Categories' : cat}
+              </button>
+            );
+          })}
         </div>
 
         {/* Second Row: Type filter, Status filter, Sorting, View switch */}
@@ -99,115 +99,123 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
         }}>
           {/* Type Toggle: All / Lost / Found */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Type:</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Listing Type:</span>
             <div style={{
               display: 'flex',
-              background: 'var(--bg-secondary)',
+              backgroundColor: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-md)',
               padding: 3,
-              borderRadius: 'var(--radius-full)',
               border: '1px solid var(--border-subtle)'
             }}>
-              {(['ALL', 'LOST', 'FOUND'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setSelectedType(t)}
-                  style={{
-                    padding: '5px 14px',
-                    borderRadius: 'var(--radius-full)',
-                    border: 'none',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    background: selectedType === t ? (t === 'LOST' ? 'var(--lost-gradient)' : t === 'FOUND' ? 'var(--found-gradient)' : 'var(--primary-accent)') : 'transparent',
-                    color: selectedType === t ? '#fff' : 'var(--text-secondary)',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {t === 'ALL' ? 'All Types' : t === 'LOST' ? 'Lost Items' : 'Found Items'}
-                </button>
-              ))}
+              {['ALL', 'LOST', 'FOUND'].map((type) => {
+                const isSelected = selectedType === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedType(type)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.78rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      border: 'none',
+                      backgroundColor: isSelected ? '#ffffff' : 'transparent',
+                      color: isSelected
+                        ? (type === 'LOST' ? 'var(--lost-color)' : type === 'FOUND' ? 'var(--found-color)' : 'var(--text-primary)')
+                        : 'var(--text-muted)',
+                      boxShadow: isSelected ? 'var(--shadow-xs)' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {type}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Status filter & Sorting */}
+          {/* Status Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Status:</span>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="form-input"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 500,
+                width: 'auto'
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="OPEN">Open (Active)</option>
+              <option value="CLAIM_PENDING">Verification Pending</option>
+              <option value="RETURNED">Handed Over / Returned</option>
+            </select>
+          </div>
+
+          {/* Sorting & Layout View Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Status:</span>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '6px 12px',
-                  fontSize: '0.82rem',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="OPEN">Open Only</option>
-                <option value="MATCHED">Matched</option>
-                <option value="RESOLVED">Resolved / Claimed</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Algorithm Sort:</span>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sort By:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
+                className="form-input"
                 style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
                   padding: '6px 12px',
                   fontSize: '0.82rem',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer'
+                  fontWeight: 500,
+                  width: 'auto'
                 }}
               >
-                <option value="priority">⚡ Binary Heap: Highest Priority First</option>
-                <option value="date-desc">📅 AVL Tree: Date Newest to Oldest</option>
-                <option value="date-asc">📅 AVL Tree: Date Oldest to Newest</option>
-                <option value="location">📍 AVL Tree: Location A-Z</option>
+                <option value="date">Date (MergeSort)</option>
+                <option value="name">Item Name</option>
+                <option value="status">Status</option>
               </select>
             </div>
 
-            {/* Grid / List view toggle */}
+            {/* Grid / List View Toggle */}
             <div style={{
               display: 'flex',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-medium)',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: 'var(--radius-md)',
-              padding: 2
+              padding: 3,
+              border: '1px solid var(--border-subtle)'
             }}>
               <button
                 onClick={() => setViewMode('grid')}
                 style={{
-                  padding: '6px 8px',
+                  padding: '5px 8px',
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  borderRadius: 6,
+                  backgroundColor: viewMode === 'grid' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'grid' ? 'var(--primary)' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  background: viewMode === 'grid' ? 'var(--bg-tertiary)' : 'transparent',
-                  color: viewMode === 'grid' ? '#818cf8' : 'var(--text-muted)'
+                  display: 'flex',
+                  alignItems: 'center',
+                  boxShadow: viewMode === 'grid' ? 'var(--shadow-xs)' : 'none'
                 }}
-                title="Grid View"
+                aria-label="Grid view"
               >
                 <LayoutGrid size={16} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
                 style={{
-                  padding: '6px 8px',
+                  padding: '5px 8px',
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  borderRadius: 6,
+                  backgroundColor: viewMode === 'list' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'list' ? 'var(--primary)' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  background: viewMode === 'list' ? 'var(--bg-tertiary)' : 'transparent',
-                  color: viewMode === 'list' ? '#818cf8' : 'var(--text-muted)'
+                  display: 'flex',
+                  alignItems: 'center',
+                  boxShadow: viewMode === 'list' ? 'var(--shadow-xs)' : 'none'
                 }}
-                title="List View"
+                aria-label="List view"
               >
                 <List size={16} />
               </button>
@@ -216,155 +224,154 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
         </div>
       </div>
 
-      {/* Result Count and Algorithmic Status */}
+      {/* Results Header Count */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 20,
+        marginBottom: 16,
         padding: '0 4px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-            Catalog Items
-          </h3>
-          <span style={{
-            background: 'var(--bg-tertiary)',
-            color: 'var(--text-secondary)',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            padding: '2px 10px',
-            borderRadius: 999
-          }}>
-            {sortedItems.length} items found
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#818cf8' }}>
-          <Flame size={15} />
-          <span>Priority scored via Binary Max-Heap</span>
+        <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+          Showing <strong style={{ color: 'var(--text-primary)' }}>{items.length}</strong> items in directory
         </div>
       </div>
 
-      {/* Items Rendering */}
-      {sortedItems.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center' }}>
-          <AlertCircle size={48} color="#94a3b8" style={{ marginBottom: 16 }} />
-          <h4 style={{ fontSize: '1.2rem', marginBottom: 8 }}>No items match your filter</h4>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Try resetting your search query or selecting a different category.
+      {/* Empty State */}
+      {items.length === 0 && (
+        <div className="card" style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          backgroundColor: '#ffffff'
+        }}>
+          <div style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            backgroundColor: 'var(--bg-surface)',
+            color: 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <AlertCircle size={28} />
+          </div>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 8 }}>
+            No Matching Items Found
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto 20px' }}>
+            We couldn't find any items matching your active search or filters. Try choosing a different category or clearing search terms.
           </p>
+          <button
+            onClick={() => {
+              setSelectedCategory('ALL');
+              setSelectedType('ALL');
+              setSelectedStatus('ALL');
+            }}
+            className="btn-secondary"
+          >
+            Clear All Filters
+          </button>
         </div>
-      ) : viewMode === 'grid' ? (
+      )}
+
+      {/* Grid View */}
+      {viewMode === 'grid' && items.length > 0 && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: 24
+          gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+          gap: 20
         }}>
-          {sortedItems.map((item) => (
+          {items.map((item) => (
             <div
               key={item.id}
-              className="glass-card animate-fade-in"
+              className="card"
               style={{
+                padding: 0,
+                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden',
-                position: 'relative'
+                backgroundColor: '#ffffff'
               }}
             >
-              {/* Image with overlay badge */}
-              <div style={{
-                position: 'relative',
-                height: 200,
-                width: '100%',
-                background: 'var(--bg-tertiary)',
-                overflow: 'hidden'
-              }}>
+              {/* Card Image Thumbnail */}
+              <div
+                style={{
+                  position: 'relative',
+                  height: 190,
+                  backgroundColor: 'var(--bg-surface)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => onSelectItem(item)}
+              >
                 <img
                   src={item.photoUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
                   alt={item.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.4s ease'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  loading="lazy"
                 />
 
-                {/* Status Badges top bar */}
-                <div style={{
-                  position: 'absolute',
-                  top: 12,
-                  left: 12,
-                  right: 12,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span className={item.type === 'LOST' ? 'badge-lost' : 'badge-found'}>
+                {/* Badge Pills */}
+                <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <span className={`badge ${item.type === 'LOST' ? 'badge-lost' : 'badge-found'}`}>
                     {item.type}
                   </span>
-
-                  {item.priorityScore && (
-                    <span style={{
-                      background: 'rgba(0, 0, 0, 0.75)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#fbbf24',
-                      border: '1px solid rgba(251, 191, 36, 0.3)',
-                      padding: '3px 9px',
-                      borderRadius: 999,
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}>
-                      <Flame size={12} />
-                      {Math.round(item.priorityScore * 100)}% Priority
-                    </span>
-                  )}
-                </div>
-
-                {/* Status pill bottom left */}
-                <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
-                  <span className={item.status === 'RESOLVED' ? 'badge-resolved' : item.status === 'MATCHED' ? 'badge-matched' : 'badge-category'}>
-                    {item.status}
+                  <span className={`badge ${
+                    item.status === 'OPEN' ? 'badge-found' :
+                    item.status === 'CLAIM_PENDING' ? 'badge-pending' :
+                    item.status === 'RETURNED' ? 'badge-returned' : 'badge-lost'
+                  }`}>
+                    {item.status === 'CLAIM_PENDING' ? 'CLAIM PENDING' : item.status}
                   </span>
                 </div>
+
+                {item.reward && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    color: '#059669',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    {item.reward}
+                  </div>
+                )}
               </div>
 
-              {/* Card Body */}
-              <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span className="badge-category">{item.category}</span>
-                  {item.reward && (
-                    <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#34d399',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}>
-                      <Award size={13} />
-                      {item.reward}
-                    </span>
-                  )}
+              {/* Card Content */}
+              <div style={{ padding: '18px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  color: 'var(--primary)',
+                  marginBottom: 6
+                }}>
+                  {item.category}
                 </div>
 
-                <h4 style={{
-                  fontSize: '1.05rem',
-                  fontWeight: 700,
-                  marginBottom: 8,
-                  lineHeight: 1.3,
-                  color: 'var(--text-primary)'
-                }}>
+                <h3
+                  onClick={() => onSelectItem(item)}
+                  style={{
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    lineHeight: 1.3
+                  }}
+                >
                   {item.name}
-                </h4>
+                </h3>
 
                 <p style={{
-                  fontSize: '0.85rem',
+                  fontSize: '0.86rem',
                   color: 'var(--text-secondary)',
                   lineHeight: 1.5,
                   marginBottom: 16,
@@ -376,116 +383,120 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
                   {item.description}
                 </p>
 
-                {/* Location and Date */}
-                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {/* Metadata details */}
+                <div style={{
+                  marginTop: 'auto',
+                  borderTop: '1px solid var(--border-subtle)',
+                  paddingTop: 12,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  fontSize: '0.8rem',
+                  color: 'var(--text-muted)'
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={14} color="#818cf8" />
-                    <span style={{ color: 'var(--text-secondary)' }}>{item.location}</span>
+                    <MapPin size={14} color="var(--primary)" />
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{item.location}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} color="#818cf8" />
-                    <span>Reported on {item.date}</span>
+                    <Calendar size={14} color="var(--text-muted)" />
+                    <span>{item.date}</span>
                   </div>
                 </div>
 
-                {/* Actions bottom bar */}
+                {/* Action Footer */}
                 <div style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginTop: 18,
-                  paddingTop: 14,
+                  gap: 8,
+                  marginTop: 16,
+                  paddingTop: 12,
                   borderTop: '1px solid var(--border-subtle)'
                 }}>
                   <button
                     onClick={() => onSelectItem(item)}
                     className="btn-secondary"
-                    style={{ flex: 1, justifyContent: 'center', padding: '8px 12px', fontSize: '0.82rem' }}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem' }}
                   >
-                    <Eye size={15} />
-                    <span>Details</span>
+                    View Details
                   </button>
 
-                  <button
-                    onClick={() => onCheckMatches(item)}
-                    className="btn-primary"
-                    style={{ flex: 1, justifyContent: 'center', padding: '8px 12px', fontSize: '0.82rem' }}
-                  >
-                    <span>Check Matches</span>
-                  </button>
+                  {item.type === 'FOUND' && item.status !== 'RETURNED' && item.status !== 'CLOSED' && (
+                    <button
+                      onClick={() => onClaimItem(item)}
+                      className="btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+                    >
+                      Claim
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        /* List View */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {sortedItems.map((item) => (
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {items.map((item) => (
             <div
               key={item.id}
-              className="glass-card animate-fade-in"
+              className="card"
               style={{
+                padding: '16px 20px',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '16px 20px',
-                gap: 20
+                justifyContent: 'space-between',
+                gap: 16,
+                backgroundColor: '#ffffff',
+                flexWrap: 'wrap'
               }}
             >
-              <img
-                src={item.photoUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
-                alt={item.name}
-                style={{
-                  width: 90,
-                  height: 75,
-                  borderRadius: 10,
-                  objectFit: 'cover',
-                  flexShrink: 0
-                }}
-              />
-
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <span className={item.type === 'LOST' ? 'badge-lost' : 'badge-found'}>
-                    {item.type}
-                  </span>
-                  <span className="badge-category">{item.category}</span>
-                  <h4 style={{ fontSize: '1.02rem', margin: 0, fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 260 }}>
+                <img
+                  src={item.photoUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
+                  alt={item.name}
+                  style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover' }}
+                />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span className={`badge ${item.type === 'LOST' ? 'badge-lost' : 'badge-found'}`}>
+                      {item.type}
+                    </span>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {item.category}
+                    </span>
+                  </div>
+                  <h4
+                    onClick={() => onSelectItem(item)}
+                    style={{ fontSize: '1.02rem', fontWeight: 700, cursor: 'pointer', margin: 0 }}
+                  >
                     {item.name}
                   </h4>
-                </div>
-                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: 0, marginBottom: 6 }}>
-                  {item.description}
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <MapPin size={13} color="#818cf8" /> {item.location}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={13} color="#818cf8" /> {item.date}
-                  </span>
-                  {item.reward && (
-                    <span style={{ color: '#34d399', fontWeight: 600 }}>{item.reward}</span>
-                  )}
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                    {item.location} • {item.date}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button
                   onClick={() => onSelectItem(item)}
                   className="btn-secondary"
                   style={{ padding: '8px 14px', fontSize: '0.82rem' }}
                 >
-                  <Eye size={15} />
-                  <span>Inspect</span>
+                  Inspect
                 </button>
-                <button
-                  onClick={() => onCheckMatches(item)}
-                  className="btn-primary"
-                  style={{ padding: '8px 14px', fontSize: '0.82rem' }}
-                >
-                  <span>Matches</span>
-                </button>
+                {item.type === 'FOUND' && item.status !== 'RETURNED' && item.status !== 'CLOSED' && (
+                  <button
+                    onClick={() => onClaimItem(item)}
+                    className="btn-primary"
+                    style={{ padding: '8px 16px', fontSize: '0.82rem' }}
+                  >
+                    Claim Item
+                  </button>
+                )}
               </div>
             </div>
           ))}

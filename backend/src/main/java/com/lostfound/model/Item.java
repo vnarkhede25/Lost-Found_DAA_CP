@@ -83,4 +83,13 @@ public class Item {
 
     public double getPriorityScore() { return priorityScore; }
     public void setPriorityScore(double priorityScore) { this.priorityScore = priorityScore; }
+
+    private boolean flaggedSuspicious = false;
+    private String flagReason;
+
+    public boolean isFlaggedSuspicious() { return flaggedSuspicious; }
+    public void setFlaggedSuspicious(boolean flaggedSuspicious) { this.flaggedSuspicious = flaggedSuspicious; }
+
+    public String getFlagReason() { return flagReason; }
+    public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
 }

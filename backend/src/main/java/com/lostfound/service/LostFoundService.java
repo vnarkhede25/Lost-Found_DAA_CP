@@ -1,5 +1,7 @@
 package com.lostfound.service;
 
+import com.lostfound.daa.LcsDynamicProgramming;
+import com.lostfound.daa.MergeSort;
 import com.lostfound.ds.AVLTree;
 import com.lostfound.ds.BinaryHeap;
 import com.lostfound.ds.QuadTree;
@@ -56,7 +58,7 @@ public class LostFoundService {
             spatialTree.insert(item);
         }
 
-        // Run auto-matching
+        // Run auto-matching using LCS Dynamic Programming
         findMatches();
     }
 
@@ -87,16 +89,23 @@ public class LostFoundService {
 
     // User Operations
     public boolean registerUser(String username, String email, String password) {
-        if (storage.getUserByEmail(email) != null) {
+        if (email == null || storage.getUserByEmail(email) != null) {
             return false;
         }
-        User user = new User(storage.getNextUserId(), username, email, password);
-        return storage.addUser(user);
+        String hashedPassword = StorageService.hashPassword(password);
+        User user = new User(storage.getNextUserId(), username, email.toLowerCase().trim(), hashedPassword, "STUDENT");
+        boolean added = storage.addUser(user);
+        if (added) {
+            storage.recordAudit(email, "USER_REGISTERED", "USER", user.getId(), "New student registered: " + username);
+        }
+        return added;
     }
 
     public User loginUser(String email, String password) {
-        User user = storage.getUserByEmail(email);
-        if (user != null && user.getPassword().equals(password)) {
+        if (email == null || password == null) return null;
+        User user = storage.getUserByEmail(email.toLowerCase().trim());
+        if (user != null && storage.verifyPassword(password, user.getPassword())) {
+            storage.recordAudit(email, "USER_LOGIN", "USER", user.getId(), "Successful user login");
             return user;
         }
         return null;
@@ -118,8 +127,39 @@ public class LostFoundService {
         item.setPriorityScore(Math.round(pScore * 100.0) / 100.0);
 
         storage.addItem(item);
+        storage.recordAudit(item.getReporterEmail() != null ? item.getReporterEmail() : "guest",
+                "REPORT_CREATED", "ITEM", item.getId(),
+                "Reported " + item.getType() + " item: " + item.getName() + " at " + item.getLocation());
+
         rebuildAllIndexes();
         return item;
+    }
+
+    public boolean updateItem(Item item, String actorEmail) {
+        Item existing = storage.getItemById(item.getId());
+        if (existing == null) return false;
+
+        User actor = storage.getUserByEmail(actorEmail);
+        boolean isAdmin = actor != null && "ADMIN".equalsIgnoreCase(actor.getRole());
+        boolean isOwner = existing.getReporterEmail() != null && existing.getReporterEmail().equalsIgnoreCase(actorEmail);
+
+        if (!isAdmin && !isOwner) {
+            throw new SecurityException("Unauthorized: You can only edit your own reports");
+        }
+
+        existing.setName(item.getName());
+        existing.setCategory(item.getCategory());
+        existing.setDescription(item.getDescription());
+        existing.setLocation(item.getLocation());
+        existing.setDate(item.getDate());
+        if (item.getPhotoUrl() != null) existing.setPhotoUrl(item.getPhotoUrl());
+        if (item.getContactPhone() != null) existing.setContactPhone(item.getContactPhone());
+        if (item.getReward() != null) existing.setReward(item.getReward());
+
+        storage.recordAudit(actorEmail, "REPORT_UPDATED", "ITEM", item.getId(),
+                "Updated details for Item #" + item.getId());
+        rebuildAllIndexes();
+        return true;
     }
 
     public boolean updateItemStatus(int id, String status) {
@@ -133,11 +173,45 @@ public class LostFoundService {
     }
 
     public boolean deleteItem(int id) {
+        Item item = storage.getItemById(id);
+        if (item == null) return false;
+
         boolean removed = storage.deleteItem(id);
         if (removed) {
+            storage.recordAudit("system", "REPORT_DELETED", "ITEM", id,
+                    "Deleted report #" + id + " (" + item.getName() + ")");
             rebuildAllIndexes();
         }
         return removed;
+    }
+
+    public boolean withdrawItem(int id, String actorEmail) {
+        Item item = storage.getItemById(id);
+        if (item == null) return false;
+
+        User actor = storage.getUserByEmail(actorEmail);
+        boolean isAdmin = actor != null && "ADMIN".equalsIgnoreCase(actor.getRole());
+        boolean isOwner = item.getReporterEmail() != null && item.getReporterEmail().equalsIgnoreCase(actorEmail);
+
+        if (!isAdmin && !isOwner) {
+            throw new SecurityException("Unauthorized: You can only withdraw your own reports");
+        }
+
+        item.setStatus("CLOSED");
+        storage.recordAudit(actorEmail, "REPORT_WITHDRAWN", "ITEM", id,
+                "Withdrawn report #" + id + " by " + actorEmail);
+        rebuildAllIndexes();
+        return true;
+    }
+
+    public boolean flagItemAsSuspicious(int id, String reason, String reporterEmail) {
+        Item item = storage.getItemById(id);
+        if (item == null) return false;
+        item.setFlaggedSuspicious(true);
+        item.setFlagReason(reason);
+        storage.recordAudit(reporterEmail, "ITEM_FLAGGED_SUSPICIOUS", "ITEM", id,
+                "Student flagged listing as suspicious. Reason: " + reason);
+        return true;
     }
 
     public Item getItemById(int id) {
@@ -148,7 +222,7 @@ public class LostFoundService {
         return storage.getAllItems();
     }
 
-    // ADS Search & Autocomplete
+    // Search & Autocomplete
     public List<Item> searchItems(String query) {
         if (query == null || query.trim().isEmpty()) {
             return getAllItems();
@@ -157,7 +231,7 @@ public class LostFoundService {
         List<Integer> ids = searchTrie.getSuggestions(q);
         Set<Integer> idSet = new LinkedHashSet<>(ids);
 
-        // Fallback or union with substring match for comprehensive results
+        // Fallback / substring search for robustness
         for (Item item : storage.getAllItems()) {
             if ((item.getName() != null && item.getName().toLowerCase().contains(q)) ||
                 (item.getDescription() != null && item.getDescription().toLowerCase().contains(q)) ||
@@ -190,6 +264,35 @@ public class LostFoundService {
         return new ArrayList<>(titles);
     }
 
+    /**
+     * DAA Concept: Merge Sort (Unit II - Divide & Conquer)
+     * Demonstrates production in-memory sorting using Merge Sort.
+     */
+    public List<Item> sortItemsUsingMergeSort(List<Item> items, String sortBy) {
+        if (items == null) return Collections.emptyList();
+
+        Comparator<Item> comparator;
+        if ("date".equalsIgnoreCase(sortBy)) {
+            // Newest date first
+            comparator = (a, b) -> {
+                String d1 = a.getDate() != null ? a.getDate() : "";
+                String d2 = b.getDate() != null ? b.getDate() : "";
+                return d2.compareTo(d1);
+            };
+        } else if ("name".equalsIgnoreCase(sortBy) || "title".equalsIgnoreCase(sortBy)) {
+            comparator = (a, b) -> {
+                String n1 = a.getName() != null ? a.getName().toLowerCase() : "";
+                String n2 = b.getName() != null ? b.getName().toLowerCase() : "";
+                return n1.compareTo(n2);
+            };
+        } else {
+            // Default to priority score descending
+            comparator = (a, b) -> Double.compare(b.getPriorityScore(), a.getPriorityScore());
+        }
+
+        return MergeSort.sort(items, comparator);
+    }
+
     // AVL Tree Operations
     public List<Item> getItemsByDateRange(String start, String end) {
         return dateTree.getRange(start, end);
@@ -208,23 +311,33 @@ public class LostFoundService {
         return priorityHeap.getTopK(count);
     }
 
-    // QuadTree Operations
+    // Spatial Tree Operations
     public List<Item> findNearby(double x, double y, double radius) {
         return spatialTree.findNearby(x, y, radius);
     }
 
-    // Smart Matching Algorithms
+    // Smart Matching Algorithms using LCS Dynamic Programming
     public synchronized List<Match> findMatches() {
         List<Item> all = storage.getAllItems();
-        List<Item> lostList = all.stream().filter(i -> "LOST".equalsIgnoreCase(i.getType())).collect(Collectors.toList());
-        List<Item> foundList = all.stream().filter(i -> "FOUND".equalsIgnoreCase(i.getType())).collect(Collectors.toList());
+        // Only active, unresolved reports participate in active matching
+        List<Item> lostList = all.stream()
+                .filter(i -> "LOST".equalsIgnoreCase(i.getType()) &&
+                        !"RETURNED".equalsIgnoreCase(i.getStatus()) &&
+                        !"CLOSED".equalsIgnoreCase(i.getStatus()))
+                .collect(Collectors.toList());
+
+        List<Item> foundList = all.stream()
+                .filter(i -> "FOUND".equalsIgnoreCase(i.getType()) &&
+                        !"RETURNED".equalsIgnoreCase(i.getStatus()) &&
+                        !"CLOSED".equalsIgnoreCase(i.getStatus()))
+                .collect(Collectors.toList());
 
         List<Match> generatedMatches = new ArrayList<>();
 
         for (Item lost : lostList) {
             for (Item found : foundList) {
                 double score = calculateMatchScore(lost, found);
-                if (score >= 0.40) { // Threshold for potential match
+                if (score >= 0.40) { // Reasonable candidate threshold
                     Match m = new Match(lost.getId(), found.getId(), Math.round(score * 100.0) / 100.0, LocalDate.now().toString());
                     m.setLostItem(lost);
                     m.setFoundItem(found);
@@ -234,10 +347,10 @@ public class LostFoundService {
             }
         }
 
-        // Sort by match score descending
-        generatedMatches.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
-        storage.setMatches(generatedMatches);
-        return generatedMatches;
+        // Sort matches descending by score using MergeSort
+        List<Match> sortedMatches = MergeSort.sort(generatedMatches, (a, b) -> Double.compare(b.getScore(), a.getScore()));
+        storage.setMatches(sortedMatches);
+        return sortedMatches;
     }
 
     public List<Match> getMatchesForUser(String email) {
@@ -249,48 +362,55 @@ public class LostFoundService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * DAA Concept: Longest Common Subsequence (LCS) for smart text matching.
+     * Combines:
+     *   1. LCS Title & Description DP Similarity (45% weight)
+     *   2. Category Exact Agreement (25% weight)
+     *   3. Location Similarity (20% weight)
+     *   4. Date Proximity (10% weight)
+     */
     public double calculateMatchScore(Item lost, Item found) {
+        if (lost == null || found == null) return 0.0;
+
         double score = 0.0;
 
-        // 1. Title / Token similarity (40%)
-        List<String> lostWords = tokenize(lost.getName() + " " + (lost.getDescription() != null ? lost.getDescription() : ""));
-        List<String> foundWords = tokenize(found.getName() + " " + (found.getDescription() != null ? found.getDescription() : ""));
-        double textSimilarity = jaccardSimilarity(lostWords, foundWords);
-        score += textSimilarity * 0.40;
+        // 1. Text Similarity via Dynamic Programming LCS (45% weight)
+        String lostText = (lost.getName() != null ? lost.getName() : "") + " " +
+                          (lost.getDescription() != null ? lost.getDescription() : "");
+        String foundText = (found.getName() != null ? found.getName() : "") + " " +
+                           (found.getDescription() != null ? found.getDescription() : "");
 
-        // 2. Location proximity / exact match (30%)
+        double tokenLcsScore = LcsDynamicProgramming.computeTokenLcsSimilarity(lostText, foundText);
+        LcsDynamicProgramming.LcsResult titleLcs = LcsDynamicProgramming.computeLcs(lost.getName(), found.getName());
+        double combinedLcsText = (tokenLcsScore * 0.65) + (titleLcs.getSimilarityRatio() * 0.35);
+        score += combinedLcsText * 0.45;
+
+        // 2. Category match (25% weight)
+        if (lost.getCategory() != null && found.getCategory() != null) {
+            if (lost.getCategory().equalsIgnoreCase(found.getCategory())) {
+                score += 0.25;
+            }
+        }
+
+        // 3. Location proximity / match (20% weight)
         if (lost.getLocation() != null && found.getLocation() != null) {
             String lLoc = lost.getLocation().toLowerCase().trim();
             String fLoc = found.getLocation().toLowerCase().trim();
             if (lLoc.equals(fLoc)) {
-                score += 0.30;
+                score += 0.20;
             } else if (lLoc.contains(fLoc) || fLoc.contains(lLoc)) {
-                score += 0.20;
-            } else {
-                // Spatial coordinate proximity check
-                double[] c1 = QuadTree.resolveCoordinates(lost);
-                double[] c2 = QuadTree.resolveCoordinates(found);
-                double dist = Math.hypot(c1[0] - c2[0], c1[1] - c2[1]);
-                if (dist <= 15.0) {
-                    score += 0.20 * (1.0 - (dist / 15.0));
-                }
+                score += 0.12;
             }
         }
 
-        // 3. Category match (20%)
-        if (lost.getCategory() != null && found.getCategory() != null) {
-            if (lost.getCategory().equalsIgnoreCase(found.getCategory())) {
-                score += 0.20;
-            }
-        }
-
-        // 4. Date proximity (10%)
+        // 4. Date proximity (10% weight)
         long days = dateDifference(lost.getDate(), found.getDate());
-        if (days <= 3) {
+        if (days <= 2) {
             score += 0.10;
-        } else if (days <= 10) {
+        } else if (days <= 7) {
             score += 0.06;
-        } else if (days <= 30) {
+        } else if (days <= 21) {
             score += 0.03;
         }
 
@@ -299,18 +419,30 @@ public class LostFoundService {
 
     private String generateMatchReason(Item lost, Item found, double score) {
         List<String> reasons = new ArrayList<>();
-        if (lost.getCategory() != null && lost.getCategory().equalsIgnoreCase(found.getCategory())) {
-            reasons.add("Matching category (" + lost.getCategory() + ")");
+
+        // LCS text signal
+        String lostTitle = lost.getName() != null ? lost.getName() : "";
+        String foundTitle = found.getName() != null ? found.getName() : "";
+        LcsDynamicProgramming.LcsResult titleLcs = LcsDynamicProgramming.computeLcs(lostTitle, foundTitle);
+        if (titleLcs.getLcsLength() >= 4) {
+            reasons.add("LCS Subsequence: \"" + titleLcs.getReconstructedLcs() + "\"");
         }
+
+        if (lost.getCategory() != null && lost.getCategory().equalsIgnoreCase(found.getCategory())) {
+            reasons.add("Category agreement (" + lost.getCategory() + ")");
+        }
+
         if (lost.getLocation() != null && found.getLocation() != null &&
             lost.getLocation().equalsIgnoreCase(found.getLocation())) {
-            reasons.add("Reported at same location (" + lost.getLocation() + ")");
+            reasons.add("Same campus location (" + lost.getLocation() + ")");
         }
+
         long days = dateDifference(lost.getDate(), found.getDate());
         if (days <= 3) {
-            reasons.add(days == 0 ? "Same-day occurrence" : days + " days apart");
+            reasons.add(days == 0 ? "Same-day report" : days + " days apart");
         }
-        reasons.add(String.format("%.0f%% confidence score", score * 100));
+
+        reasons.add(String.format("%.0f%% match score", score * 100));
         return String.join(" • ", reasons);
     }
 
@@ -359,30 +491,15 @@ public class LostFoundService {
         return result;
     }
 
-    private double jaccardSimilarity(List<String> a, List<String> b) {
-        if (a.isEmpty() || b.isEmpty()) return 0.0;
-        Set<String> setA = new HashSet<>(a);
-        Set<String> setB = new HashSet<>(b);
-
-        Set<String> intersection = new HashSet<>(setA);
-        intersection.retainAll(setB);
-
-        Set<String> union = new HashSet<>(setA);
-        union.addAll(setB);
-
-        if (union.isEmpty()) return 0.0;
-        return (double) intersection.size() / union.size();
-    }
-
-    // ADS Analytics & Diagnostics
+    // Analytics & Diagnostics
     public DSStats getDSStats() {
         DSStats stats = new DSStats();
         List<Item> all = storage.getAllItems();
         stats.setTotalItems(all.size());
         stats.setLostCount((int) all.stream().filter(i -> "LOST".equalsIgnoreCase(i.getType())).count());
         stats.setFoundCount((int) all.stream().filter(i -> "FOUND".equalsIgnoreCase(i.getType())).count());
-        stats.setMatchedCount((int) all.stream().filter(i -> "MATCHED".equalsIgnoreCase(i.getStatus())).count());
-        stats.setResolvedCount((int) all.stream().filter(i -> "RESOLVED".equalsIgnoreCase(i.getStatus())).count());
+        stats.setMatchedCount((int) all.stream().filter(i -> "CLAIM_PENDING".equalsIgnoreCase(i.getStatus()) || "MATCHED".equalsIgnoreCase(i.getStatus())).count());
+        stats.setResolvedCount((int) all.stream().filter(i -> "RETURNED".equalsIgnoreCase(i.getStatus()) || "RESOLVED".equalsIgnoreCase(i.getStatus())).count());
 
         stats.setTrieNodeCount(searchTrie.getNodeCount());
         stats.setTrieWordsIndexed(searchTrie.getWordCount());

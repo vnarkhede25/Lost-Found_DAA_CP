@@ -23,7 +23,8 @@ public class ItemController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "date") String sortBy) {
 
         List<Item> items = (q != null && !q.trim().isEmpty())
                 ? service.searchItems(q)
@@ -38,6 +39,9 @@ public class ItemController {
         if (status != null && !status.isEmpty() && !"ALL".equalsIgnoreCase(status)) {
             items = items.stream().filter(i -> status.equalsIgnoreCase(i.getStatus())).collect(Collectors.toList());
         }
+
+        // Apply Merge Sort for supported sorting (date, name, priority)
+        items = service.sortItemsUsingMergeSort(items, sortBy);
 
         return ResponseEntity.ok(items);
     }
@@ -57,6 +61,38 @@ public class ItemController {
         return ResponseEntity.ok(created);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateItem(
+            @PathVariable int id,
+            @RequestBody Item item,
+            @RequestParam(required = false, defaultValue = "alex.morgan@university.edu") String actorEmail) {
+        item.setId(id);
+        try {
+            boolean updated = service.updateItem(item, actorEmail);
+            if (!updated) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(item);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<?> withdrawItem(
+            @PathVariable int id,
+            @RequestParam(required = false, defaultValue = "alex.morgan@university.edu") String actorEmail) {
+        try {
+            boolean withdrawn = service.withdrawItem(id, actorEmail);
+            if (!withdrawn) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(Map.of("success", true, "id", id, "status", "CLOSED"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable int id, @RequestBody Map<String, String> payload) {
         String status = payload.get("status");
@@ -74,5 +110,18 @@ public class ItemController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(Map.of("success", true, "id", id));
+    }
+
+    @PostMapping("/{id}/flag")
+    public ResponseEntity<?> flagItem(
+            @PathVariable int id,
+            @RequestBody Map<String, String> payload,
+            @RequestParam(required = false, defaultValue = "student@university.edu") String reporterEmail) {
+        String reason = payload.getOrDefault("reason", "Suspicious or scam listing flagged by student");
+        boolean flagged = service.flagItemAsSuspicious(id, reason, reporterEmail);
+        if (!flagged) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("success", true, "id", id, "flagged", true));
     }
 }

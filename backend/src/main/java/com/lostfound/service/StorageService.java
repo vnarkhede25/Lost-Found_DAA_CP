@@ -1,10 +1,17 @@
 package com.lostfound.service;
 
+import com.lostfound.model.AuditLog;
+import com.lostfound.model.Claim;
 import com.lostfound.model.Item;
 import com.lostfound.model.Match;
 import com.lostfound.model.User;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,21 +21,25 @@ public class StorageService {
     private final Map<Integer, User> usersById = new ConcurrentHashMap<>();
     private final Map<String, User> usersByEmail = new ConcurrentHashMap<>();
     private final Map<Integer, Item> itemsById = new ConcurrentHashMap<>();
+    private final Map<Integer, Claim> claimsById = new ConcurrentHashMap<>();
     private final List<Match> matches = Collections.synchronizedList(new ArrayList<>());
+    private final List<AuditLog> auditLogs = Collections.synchronizedList(new ArrayList<>());
 
     private final AtomicInteger userIdSequence = new AtomicInteger(100);
-    private final AtomicInteger itemIdSequence = new AtomicInteger(1);
+    private final AtomicInteger itemIdSequence = new AtomicInteger(10);
+    private final AtomicInteger claimIdSequence = new AtomicInteger(1);
+    private final AtomicInteger auditIdSequence = new AtomicInteger(1);
 
     public StorageService() {
         initSampleData();
     }
 
     private void initSampleData() {
-        // Sample Users
-        addUser(new User(1, "Alex Morgan", "alex.morgan@university.edu", "pass123", "USER"));
-        addUser(new User(2, "Sophia Patel", "sophia.p@university.edu", "pass123", "USER"));
-        addUser(new User(3, "David Kim", "david.k@university.edu", "pass123", "USER"));
-        addUser(new User(4, "Campus Security", "security@university.edu", "admin123", "ADMIN"));
+        // Sample Users with secure hashed passwords
+        addUser(new User(1, "Alex Morgan", "alex.morgan@university.edu", hashPassword("pass123"), "STUDENT"));
+        addUser(new User(2, "Sophia Patel", "sophia.p@university.edu", hashPassword("pass123"), "STUDENT"));
+        addUser(new User(3, "David Kim", "david.k@university.edu", hashPassword("pass123"), "STUDENT"));
+        addUser(new User(4, "Campus Security Admin", "security@university.edu", hashPassword("admin123"), "ADMIN"));
 
         // Sample Items with realistic details and Unsplash photos
         Item i1 = new Item(1, "LOST", "Apple AirPods Pro 2nd Gen", "Electronics",
@@ -52,7 +63,7 @@ public class StorageService {
 
         Item i3 = new Item(3, "LOST", "Black North Face Water Bottle", "Accessories",
                 "Hydro flask insulated black bottle with a sticker of NASA and golden retriever.",
-                "Student Activity Center Gym", "2026-10-20", "david.k@university.edu", "OPEN",
+                "Student Activity Center Gym", "2026-10-20", "david.k@university.edu", "CLAIM_PENDING",
                 "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=600&q=80");
         i3.setReporterName("David Kim");
         i3.setContactPhone("+1 (555) 345-6789");
@@ -60,8 +71,8 @@ public class StorageService {
         i3.setLongitude(31.8);
 
         Item i4 = new Item(4, "FOUND", "Insulated Hydro Flask Bottle with Stickers", "Accessories",
-                "Found on the bleachers in the sports gym after basketball practice.",
-                "Student Activity Center Gym", "2026-10-21", "security@university.edu", "OPEN",
+                "Found on the bleachers in the sports gym after basketball practice. Has NASA and golden retriever sticker.",
+                "Student Activity Center Gym", "2026-10-21", "security@university.edu", "CLAIM_PENDING",
                 "https://images.unsplash.com/photo-1570572858178-5776c5b967d6?auto=format&fit=crop&w=600&q=80");
         i4.setReporterName("Campus Security");
         i4.setLatitude(61.8);
@@ -86,7 +97,7 @@ public class StorageService {
 
         Item i7 = new Item(7, "FOUND", "Set of Keys with Red University Lanyard", "Keys",
                 "3 silver keys with a red campus alumni lanyard and a small USB flash drive attached.",
-                "Main Auditorium Lobby", "2026-10-19", "security@university.edu", "RESOLVED",
+                "Main Auditorium Lobby", "2026-10-19", "security@university.edu", "RETURNED",
                 "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=600&q=80");
         i7.setReporterName("Campus Security");
         i7.setLatitude(15.2);
@@ -109,9 +120,49 @@ public class StorageService {
         addItem(i7);
         addItem(i8);
 
-        itemIdSequence.set(9);
+        // Pre-seed an actual ownership claim
+        Claim c1 = new Claim(
+                claimIdSequence.getAndIncrement(),
+                4, // Found water bottle #4
+                3, // Lost report #3
+                "david.k@university.edu",
+                "David Kim",
+                "+1 (555) 345-6789",
+                "The bottle has a golden retriever sticker on the bottom left and a small dent near the cap. Also has a NASA worm logo.",
+                null,
+                "2026-10-25 14:30:00"
+        );
+        c1.setStatus("PENDING");
+        c1.setItem(i4);
+        c1.setMatchedItem(i3);
+        claimsById.put(c1.getId(), c1);
+
+        recordAudit("system", "INITIAL_SETUP", "SYSTEM", 0, "Initial dataset seeded with students, items, and verification claims.");
+        recordAudit("david.k@university.edu", "CLAIM_SUBMITTED", "CLAIM", c1.getId(), "Claim submitted for Found Item #4 (Water Bottle) citing sticker evidence.");
     }
 
+    public static String hashPassword(String raw) {
+        if (raw == null) return "";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encoded = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : encoded) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            return raw;
+        }
+    }
+
+    public boolean verifyPassword(String raw, String storedHash) {
+        if (raw == null || storedHash == null) return false;
+        // Check hash or plaintext compatibility for existing dev logins
+        return hashPassword(raw).equals(storedHash) || raw.equals(storedHash);
+    }
+
+    // User Operations
     public synchronized boolean addUser(User user) {
         if (user == null || user.getEmail() == null) return false;
         usersById.put(user.getId(), user);
@@ -132,6 +183,7 @@ public class StorageService {
         return userIdSequence.incrementAndGet();
     }
 
+    // Item Operations
     public synchronized boolean addItem(Item item) {
         if (item == null) return false;
         itemsById.put(item.getId(), item);
@@ -154,6 +206,7 @@ public class StorageService {
         return itemIdSequence.incrementAndGet();
     }
 
+    // Match Operations
     public List<Match> getMatches() {
         return new ArrayList<>(matches);
     }
@@ -165,5 +218,52 @@ public class StorageService {
 
     public synchronized void addMatch(Match match) {
         matches.add(match);
+    }
+
+    // Claim Operations
+    public synchronized boolean addClaim(Claim claim) {
+        if (claim == null) return false;
+        claimsById.put(claim.getId(), claim);
+        return true;
+    }
+
+    public Claim getClaimById(int id) {
+        return claimsById.get(id);
+    }
+
+    public List<Claim> getAllClaims() {
+        List<Claim> list = new ArrayList<>(claimsById.values());
+        list.sort((a, b) -> Integer.compare(b.getId(), a.getId())); // Newest first
+        return list;
+    }
+
+    public List<Claim> getClaimsByEmail(String email) {
+        if (email == null) return Collections.emptyList();
+        String target = email.toLowerCase().trim();
+        List<Claim> userClaims = new ArrayList<>();
+        for (Claim c : claimsById.values()) {
+            if (c.getClaimantEmail() != null && c.getClaimantEmail().equalsIgnoreCase(target)) {
+                userClaims.add(c);
+            }
+        }
+        userClaims.sort((a, b) -> Integer.compare(b.getId(), a.getId()));
+        return userClaims;
+    }
+
+    public int getNextClaimId() {
+        return claimIdSequence.incrementAndGet();
+    }
+
+    // Audit Log Operations
+    public void recordAudit(String actor, String action, String targetType, int targetId, String details) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        AuditLog log = new AuditLog(auditIdSequence.getAndIncrement(), actor, action, targetType, targetId, details, timestamp);
+        auditLogs.add(log);
+    }
+
+    public List<AuditLog> getAuditLogs() {
+        List<AuditLog> copy = new ArrayList<>(auditLogs);
+        copy.sort((a, b) -> Integer.compare(b.getId(), a.getId()));
+        return copy;
     }
 }

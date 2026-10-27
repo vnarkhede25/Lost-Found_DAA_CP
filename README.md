@@ -1,102 +1,100 @@
-# TrackBack | Lost & Found System (React + Spring Boot + TypeScript)
+# CampusFind — Real-World College Lost & Found Platform
 
-> **Advanced Data Structures & Algorithms Course Project**  
-> An intelligent lost and found recovery platform featuring high-performance data structures: **Trie (Prefix Tree)**, **AVL Balanced Trees**, **Binary Max-Heap Priority Queue**, and **2D Spatial QuadTree**, packaged into a clean, modern dark-mode **React + TypeScript** interface and a **Spring Boot** REST backend.
-
----
-
-## 🛠 Tech Stack Overview
-
-- **Frontend**: [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
-- **Styling**: Vanilla CSS Design System with Glassmorphism, Neon Accents, and Smooth Keyframe Animations
-- **Icons & Effects**: [Lucide React](https://lucide.dev/), Canvas Confetti
-- **Backend**: [Spring Boot 3.3.4](https://spring.io/projects/spring-boot), Java 21+ REST APIs
-- **Build Tools**: Apache Maven 3.9+ & npm
+A production-ready full-stack college Lost & Found web platform engineered for students and campus security administrators, integrated with core algorithmic principles from the **Design and Analysis of Algorithms (DAA)** curriculum.
 
 ---
 
-## 🏗 Modular Architecture
+## 🏛️ Architecture & Tech Stack
+
+The application is completely built with a modern full-stack web architecture:
+- **Backend**: Java 21, Spring Boot 3.3.4, REST APIs, Maven
+- **Frontend**: TypeScript, React 19, Vite, Tailwind/Vanilla CSS
+- **Data Persistence**: JSON-based persistent storage (`users.json`, `items.json`, `claims.json`, `audit_logs.json`) with secure password hashing (BCrypt)
 
 ```
 lost-and-found/
-├── backend/                              # Spring Boot REST API
-│   ├── pom.xml                           # Maven dependencies (Web, Validation)
-│   └── src/main/java/com/lostfound/
-│       ├── LostFoundApplication.java     # Spring Boot application entry point
-│       ├── config/WebCorsConfig.java     # CORS cross-origin configuration
-│       ├── model/                        # Domain models (Item, Match, PriorityItem, User, DSStats)
-│       ├── ds/                           # Core Advanced Data Structures
-│       │   ├── Trie.java                 # Prefix tree for real-time autocomplete search
-│       │   ├── AVLTree.java              # Self-balancing BST for date/location range search
-│       │   ├── BinaryHeap.java           # Max-Heap for priority item scoring
-│       │   └── QuadTree.java             # 2D Spatial quadtree for radius & coordinate search
-│       ├── service/
-│       │   ├── StorageService.java       # Seed data & in-memory item storage
-│       │   └── LostFoundService.java     # Algorithmic orchestration & Jaccard matching
-│       └── controller/
-│           ├── ItemController.java       # CRUD REST endpoints (/api/items)
-│           ├── SearchController.java     # Trie, AVL, & Quadtree endpoints (/api/search)
-│           ├── MatchController.java      # Jaccard matching & claim endpoints (/api/matches)
-│           ├── AuthController.java       # Registration & login (/api/auth)
-│           └── ADSController.java        # Telemetry & index rebuild (/api/ads)
+├── backend/                  # Java 21 & Spring Boot REST API
+│   ├── src/main/java/com/lostfound/
+│   │   ├── controller/      # REST API endpoints (Items, Claims, DAA, Admin, Auth)
+│   │   ├── daa/             # Exact DAA Syllabus Implementations
+│   │   ├── model/           # Data models (Item, Claim, User, AuditLog, etc.)
+│   │   └── service/         # Business logic, matching, and storage
+│   ├── src/test/java/       # Comprehensive JUnit 5 Test Suite (15 passing tests)
+│   └── pom.xml              # Maven dependencies & build config
 │
-├── frontend/                             # React + TypeScript + Vite UI
-│   ├── package.json                      # React, Lucide, Canvas-Confetti, Vite
-│   ├── vite.config.ts                    # Reverse proxy to port 8080
-│   └── src/
-│       ├── types/index.ts                # TypeScript interface definitions
-│       ├── api/client.ts                 # Full-featured API client with offline fallback
-│       ├── index.css                     # Master design system (glassmorphism & tokens)
-│       ├── components/
-│       │   ├── Navbar.tsx                # Brand header, tab navigation & user switcher
-│       │   ├── HeroSection.tsx           # Search banner with real-time Trie autocomplete
-│       │   ├── ItemExplorer.tsx          # Filterable catalog with grid/list view & sorting
-│       │   ├── SmartMatchmaker.tsx       # Jaccard confidence gauges & claim resolution
-│       │   ├── QuadTreeRadar.tsx         # Interactive 2D campus radar & radius scanner
-│       │   ├── ADSInspector.tsx          # Real-time algorithm observatory & heap rankings
-│       │   ├── ReportModal.tsx           # Wizard modal for reporting lost/found items
-│       │   └── ItemDetailModal.tsx       # Comprehensive detail drawer & item actions
-│       └── App.tsx                       # Master application component
-└── README.md
+├── frontend/                 # React 19 & TypeScript SPA
+│   ├── src/
+│   │   ├── api/             # Typed API clients for backend integration
+│   │   ├── components/      # UI components (Explorer, Admin, Claims, DAA Inspector)
+│   │   ├── types/           # Domain TypeScript definitions
+│   │   └── index.css        # Professional titanium/slate design system
+│   ├── package.json         # Frontend dependencies (React, Lucide icons, Vite)
+│   └── vite.config.ts       # Vite proxy & build config
+│
+└── data/                     # Persistent JSON storage
 ```
 
 ---
 
-## ⚡ Data Structures & Algorithms
+## 🧠 DAA Course Syllabus Implementations
 
-| Data Structure | Optimization Purpose | Time Complexity | Feature Implementation |
-|---|---|---|---|
-| **Trie (Prefix Tree)** | Search Autocomplete | **O(m)** | Real-time search predictions as you type item titles, categories, or keywords. |
-| **AVL Balanced Tree** | Range & Sorted Queries | **O(log n + k)** | Date range filtering (`start` to `end`) and sorted displays with rotations. |
-| **Binary Max-Heap** | Urgency & Priority Queue | **O(log n)** | Prioritizes recent items, lost items, and items with photos into top-10 rankings. |
-| **Spatial QuadTree** | 2D Geolocation Search | **O(log n)** | Spatial subdivisions (NW, NE, SW, SE) for radius queries ("items near me"). |
-| **Jaccard Similarity** | Smart Match Scoring | **O(v + w)** | Multi-factor matching between lost and found items (token overlap + proximity). |
+CampusFind directly demonstrates four exact concepts from the DAA syllabus:
+
+### 1. Unit I: Asymptotic Analysis & Searching (`SearchBenchmark.java`)
+- **Real-World Problem**: Fast campus catalog item filtering by category and keywords.
+- **Algorithms Compared**:
+  - Linear Search baseline: $\Theta(n)$ worst-case time complexity.
+  - In-memory Indexed Hash Lookup: $\Theta(1 + k)$ average-case retrieval where $k$ is result set size.
+- **Empirical Benchmarking**: Built-in microsecond timer demonstrating orders of magnitude speedups as catalog scales.
+
+### 2. Unit II: Divide & Conquer — Merge Sort (`MergeSort.java`)
+- **Real-World Problem**: Deterministic, stable ordering of campus listings by reporting date, item name, or resolution status.
+- **Recurrence Relation**:
+  $$T(n) = 2T(n/2) + \Theta(n) \implies \Theta(n \log n)$$
+- **Properties**: Stable sort preserving order of equally-dated items; tracks exact comparison count during recursion.
+
+### 3. Unit III: Dynamic Programming — Longest Common Subsequence (`LcsDynamicProgramming.java`)
+- **Real-World Problem**: Semantic similarity matching between lost descriptions and found listings (e.g., student reports *"Navy blue Dell XPS laptop in library"* and finder reports *"Dell laptop blue color at reading desk"*).
+- **Recurrence Formulation**:
+  $$c[i,j] = \begin{cases} 0 & \text{if } i=0 \text{ or } j=0 \\ c[i-1,j-1] + 1 & \text{if } X[i-1] = Y[j-1] \\ \max(c[i-1,j], c[i,j-1]) & \text{otherwise} \end{cases}$$
+- **Implementations**:
+  - Full $O(m \times n)$ 2D matrix dynamic programming table with traceback for UI visualization.
+  - Memory-optimized 2-row rolling array using $O(\min(m, n))$ space.
+
+### 4. Unit V: Network Flows — Maximum Bipartite Matching (`BipartiteMatching.java`)
+- **Real-World Problem**: Globally optimal, conflict-free 1-to-1 matching between the set of reported Lost Items ($U$) and Found Items ($V$).
+- **Methodology**: Augmented path DFS search (specialization of Ford-Fulkerson on unit networks).
+- **Guarantee**: Guarantees no single found item is concurrently paired to multiple lost claims, maximizing total campus recoveries in $O(V \cdot E)$ time.
 
 ---
 
-## 🚀 Running the Application Locally
+## 🚀 Running the Application
 
-### 1. Start the Spring Boot Backend
-```powershell
+### 1. Start the Java Spring Boot Backend
+```bash
 cd backend
 mvn spring-boot:run
 ```
-*The REST API will launch at `http://localhost:8080`.*
+*The REST API will start at `http://localhost:8080`.*
 
-### 2. Start the React Frontend
-```powershell
+### 2. Run the Automated Test Suite
+```bash
+cd backend
+mvn test
+```
+*Runs all 15 JUnit unit tests verifying DAA algorithm correctness, edge cases, and claim state transitions.*
+
+### 3. Start the TypeScript & React Frontend
+```bash
 cd frontend
 npm install
 npm run dev
 ```
-*The React UI will launch at `http://localhost:5173`.*
+*The client application will start at `http://localhost:5173`.*
 
 ---
 
-## 🎨 UI Features
-
-1. **Attractive Dark Glassmorphism**: Deep slate palette, vibrant functional neon status indicators, and sleek typography (`Outfit` and `Plus Jakarta Sans`).
-2. **Instant Trie Autocomplete**: Dropdown suggestions pop up with sub-millisecond response as you type in the search bar.
-3. **Interactive 2D QuadTree Radar**: Click anywhere on the coordinate map or drag the radius slider to visualize real-time spatial partition querying.
-4. **Automated Matchmaker & Confetti**: Side-by-side comparison of matching lost and found reports with confidence gauges and celebratory confetti when claimed.
-5. **ADS Observatory**: Live telemetry dashboard detailing node counts, tree heights, heap orders, and index rebuild status.
+## 🔒 Security & Admin Workflows
+- **Secret Evidence Claims**: Students claiming found items must provide secret identifying marks (engravings, wallpaper, serial tags).
+- **Physical Handover Desk**: Security administrators verify physical IDs before completing claims.
+- **Audit Logging**: Immutable tracking of reports, claims, approvals, and withdrawals.

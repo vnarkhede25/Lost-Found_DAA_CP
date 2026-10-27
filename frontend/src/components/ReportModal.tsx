@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import type { Item } from '../types';
-import { X, PlusCircle, ShieldCheck } from 'lucide-react';
+import { X, PlusCircle, ShieldCheck, Upload, AlertCircle, Sparkles } from 'lucide-react';
 
 interface ReportModalProps {
+  isOpen: boolean;
   initialType: 'LOST' | 'FOUND';
   currentUser: string;
   onClose: () => void;
@@ -29,11 +30,14 @@ const CAMPUS_LOCATIONS = [
 ];
 
 export const ReportModal: React.FC<ReportModalProps> = ({
+  isOpen,
   initialType,
   currentUser,
   onClose,
   onSubmit
 }) => {
+  if (!isOpen) return null;
+
   const [type, setType] = useState<'LOST' | 'FOUND'>(initialType);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Electronics');
@@ -44,11 +48,20 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [contactPhone, setContactPhone] = useState('+1 (555) 234-5678');
   const [reward, setReward] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setFormError('Please enter an item name');
+      return;
+    }
+    if (!description.trim()) {
+      setFormError('Please provide a brief description to help identify the item');
+      return;
+    }
 
+    setFormError('');
     setIsSubmitting(true);
     const locMatch = CAMPUS_LOCATIONS.find(l => l.name === location);
 
@@ -70,6 +83,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         reward: reward.trim() ? (reward.startsWith('$') ? reward : `$${reward}`) : undefined
       });
       onClose();
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to submit report. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +92,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620, backgroundColor: '#ffffff' }}>
         {/* Modal Header */}
         <div style={{
           padding: '20px 24px',
@@ -85,224 +100,260 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.02)'
+          backgroundColor: '#ffffff'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {type === 'LOST' ? (
-              <div style={{ padding: 6, borderRadius: 8, background: 'var(--lost-bg)', color: '#f43f5e' }}>
-                <PlusCircle size={20} />
-              </div>
-            ) : (
-              <div style={{ padding: 6, borderRadius: 8, background: 'var(--found-bg)', color: '#10b981' }}>
-                <ShieldCheck size={20} />
-              </div>
-            )}
-            <div>
-              <h3 style={{ fontSize: '1.25rem', margin: 0 }}>
-                {type === 'LOST' ? 'Report a Lost Item' : 'Report a Found Item'}
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                Automatically indexed into Trie, AVL, and QuadTree spatial systems
-              </p>
-            </div>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              {type === 'LOST' ? 'Report a Lost Item' : 'Report a Found Item'}
+            </h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+              Submit details to campus directory for instant algorithmic matching
+            </p>
           </div>
-
           <button
             onClick={onClose}
             style={{
-              background: 'transparent',
+              background: 'var(--bg-surface)',
               border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: 4
+              borderRadius: 'var(--radius-full)',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer'
             }}
+            aria-label="Close modal"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Form Body */}
+        {/* Modal Body */}
         <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
-          {/* Type Selector */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-            <button
-              type="button"
-              onClick={() => setType('LOST')}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: type === 'LOST' ? '2px solid #f43f5e' : '1px solid var(--border-medium)',
-                background: type === 'LOST' ? 'var(--lost-bg)' : 'var(--bg-secondary)',
-                color: type === 'LOST' ? '#f43f5e' : 'var(--text-secondary)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-            >
-              LOST ITEM
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('FOUND')}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                borderRadius: 'var(--radius-md)',
-                border: type === 'FOUND' ? '2px solid #10b981' : '1px solid var(--border-medium)',
-                background: type === 'FOUND' ? 'var(--found-bg)' : 'var(--bg-secondary)',
-                color: type === 'FOUND' ? '#10b981' : 'var(--text-secondary)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-            >
-              FOUND ITEM
-            </button>
+          {formError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 14px',
+              backgroundColor: 'var(--lost-bg)',
+              color: 'var(--lost-color)',
+              border: '1px solid var(--lost-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.86rem',
+              marginBottom: 18
+            }}>
+              <AlertCircle size={16} />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {/* Type Toggle */}
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label">Report Type</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setType('LOST')}
+                style={{
+                  padding: '10px',
+                  borderRadius: 'var(--radius-md)',
+                  border: type === 'LOST' ? '2px solid var(--lost-color)' : '1px solid var(--border-medium)',
+                  backgroundColor: type === 'LOST' ? 'var(--lost-bg)' : '#ffffff',
+                  color: type === 'LOST' ? 'var(--lost-color)' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Lost by Me
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('FOUND')}
+                style={{
+                  padding: '10px',
+                  borderRadius: 'var(--radius-md)',
+                  border: type === 'FOUND' ? '2px solid var(--found-color)' : '1px solid var(--border-medium)',
+                  backgroundColor: type === 'FOUND' ? 'var(--found-bg)' : '#ffffff',
+                  color: type === 'FOUND' ? 'var(--found-color)' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Found by Me
+              </button>
+            </div>
           </div>
 
           {/* Item Name */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-              Item Name / Title *
-            </label>
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label">Item Title *</label>
             <input
               type="text"
               required
-              placeholder="e.g. Apple AirPods Pro with Black Case"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Space Gray 13-inch MacBook Pro, Hydro Flask..."
+              className="form-input"
             />
           </div>
 
           {/* Category & Date Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-                Category
-              </label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <label className="form-label">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="form-input"
+              >
                 <option value="Electronics">Electronics</option>
                 <option value="Accessories">Accessories</option>
                 <option value="Bags & Wallets">Bags &amp; Wallets</option>
                 <option value="Keys">Keys</option>
                 <option value="Books & Stationery">Books &amp; Stationery</option>
                 <option value="IDs & Cards">IDs &amp; Cards</option>
-                <option value="Other">Other</option>
               </select>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-                Date {type === 'LOST' ? 'Lost' : 'Found'}
-              </label>
+              <label className="form-label">Incident Date</label>
               <input
                 type="date"
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                className="form-input"
               />
             </div>
           </div>
 
-          {/* Location & Reward Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 16, marginBottom: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-                Campus Location
-              </label>
-              <select value={location} onChange={(e) => setLocation(e.target.value)}>
-                {CAMPUS_LOCATIONS.map((loc) => (
-                  <option key={loc.name} value={loc.name}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-                {type === 'LOST' ? 'Reward (Optional)' : 'Contact Phone'}
-              </label>
-              {type === 'LOST' ? (
-                <input
-                  type="text"
-                  placeholder="e.g. $50 Reward"
-                  value={reward}
-                  onChange={(e) => setReward(e.target.value)}
-                />
-              ) : (
-                <input
-                  type="text"
-                  placeholder="+1 (555) 000-0000"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                />
-              )}
-            </div>
+          {/* Location */}
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label">Campus Location</label>
+            <select
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="form-input"
+            >
+              {CAMPUS_LOCATIONS.map(loc => (
+                <option key={loc.name} value={loc.name}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Description */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-              Description &amp; Identifying Details
-            </label>
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label">Detailed Description *</label>
             <textarea
+              required
               rows={3}
-              placeholder="Describe color, scratches, stickers, serial numbers, exact spot found..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide color, stickers, specific scratches, or key tags to allow the algorithm to match accurately..."
+              className="form-input"
+              style={{ resize: 'vertical' }}
             />
           </div>
 
-          {/* Photo Presets & Custom URL */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: 6 }}>
-              Photo Asset (Choose Preset or Custom URL)
-            </label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              {PHOTO_PRESETS.map((p) => (
+          {/* Photo Preset Selector */}
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label">Item Photo Preview</label>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 10 }}>
+              {PHOTO_PRESETS.map((p, idx) => (
                 <button
-                  key={p.label}
+                  key={idx}
                   type="button"
                   onClick={() => setPhotoUrl(p.url)}
-                  className={`pill-filter ${photoUrl === p.url ? 'active' : ''}`}
-                  style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    border: photoUrl === p.url ? '1px solid var(--primary)' : '1px solid var(--border-medium)',
+                    backgroundColor: photoUrl === p.url ? 'var(--primary-bg)' : '#ffffff',
+                    color: photoUrl === p.url ? 'var(--primary)' : 'var(--text-secondary)',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer'
+                  }}
                 >
                   {p.label}
                 </button>
               ))}
             </div>
-            <input
-              type="text"
-              placeholder="Or paste custom image URL..."
-              value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              style={{ fontSize: '0.82rem' }}
-            />
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 10,
+              backgroundColor: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-subtle)'
+            }}>
+              <img
+                src={photoUrl}
+                alt="Item thumbnail"
+                style={{ width: 60, height: 60, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
+              />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block' }}>Photo URL</span>
+                <input
+                  type="url"
+                  value={photoUrl}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                  className="form-input"
+                  style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Submit button */}
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: 10 }}>
-            <button type="button" onClick={onClose} className="btn-secondary">
+          {/* Reward (Optional for Lost) */}
+          {type === 'LOST' && (
+            <div style={{ marginBottom: 20 }}>
+              <label className="form-label">Optional Finder Reward</label>
+              <input
+                type="text"
+                value={reward}
+                onChange={(e) => setReward(e.target.value)}
+                placeholder="e.g. $25 coffee card, $50 cash..."
+                className="form-input"
+              />
+            </div>
+          )}
+
+          {/* Footer Actions */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 10,
+            paddingTop: 16,
+            borderTop: '1px solid var(--border-subtle)'
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="btn-secondary"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={type === 'LOST' ? 'btn-lost' : 'btn-found'}
+              className="btn-primary"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 24px',
-                borderRadius: 'var(--radius-full)',
-                fontWeight: 700,
-                fontSize: '0.92rem',
-                cursor: 'pointer'
+                backgroundColor: type === 'LOST' ? 'var(--lost-color)' : 'var(--found-color)'
               }}
             >
-              <span>{isSubmitting ? 'Indexing...' : `Publish ${type === 'LOST' ? 'Lost Report' : 'Found Report'}`}</span>
+              {isSubmitting ? 'Saving Report...' : 'Publish Listing'}
             </button>
           </div>
         </form>

@@ -8,7 +8,7 @@ export interface Item {
   date: string;
   reporterEmail: string;
   reporterName?: string;
-  status: 'OPEN' | 'MATCHED' | 'RESOLVED';
+  status: 'OPEN' | 'CLAIM_PENDING' | 'MATCHED' | 'RETURNED' | 'RESOLVED' | 'CLOSED';
   photoUrl?: string;
   latitude?: number;
   longitude?: number;
@@ -28,6 +28,44 @@ export interface Match {
   foundItem?: Item;
 }
 
+export interface Claim {
+  id: number;
+  itemId: number;
+  matchedItemId?: number;
+  claimantEmail: string;
+  claimantName: string;
+  contactPhone?: string;
+  descriptionProof: string;
+  proofPhotoUrl?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'RETURNED_HANDED_OVER';
+  adminNotes?: string;
+  adminEmail?: string;
+  createdAt: string;
+  resolvedAt?: string;
+  item?: Item;
+  matchedItem?: Item;
+}
+
+export interface AuditLog {
+  id: number;
+  actorEmail: string;
+  action: string;
+  targetType: string;
+  targetId: number;
+  details: string;
+  timestamp: string;
+}
+
+export interface AdminOverview {
+  openLostCount: number;
+  openFoundCount: number;
+  claimPendingItemsCount: number;
+  returnedItemsCount: number;
+  pendingClaimsCount: number;
+  totalReports: number;
+  auditLogsCount: number;
+}
+
 export interface PriorityItem {
   itemId: number;
   priorityScore: number;
@@ -44,16 +82,6 @@ export interface DSStats {
   foundCount: number;
   matchedCount: number;
   resolvedCount: number;
-  trieNodeCount: number;
-  trieWordsIndexed: number;
-  avlDateTreeNodes: number;
-  avlDateTreeHeight: number;
-  avlLocationTreeNodes: number;
-  avlLocationTreeHeight: number;
-  priorityHeapSize: number;
-  highestPriorityScore: number;
-  quadTreeItemsCount: number;
-  quadTreeDepth: number;
   categoryDistribution?: Record<string, number>;
 }
 
@@ -61,5 +89,76 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: string;
+  role: 'STUDENT' | 'ADMIN';
+}
+
+export interface DAASearchBenchmark {
+  syllabusUnit: string;
+  query: string;
+  datasetSize: number;
+  linearSearch: {
+    name: string;
+    matchesFound: number;
+    comparisons: number;
+    durationNanos: number;
+    durationMicros: number;
+    complexity: Record<string, string>;
+  };
+  indexedSearch: {
+    name: string;
+    matchesFound: number;
+    comparisons: number;
+    durationNanos: number;
+    durationMicros: number;
+    complexity: Record<string, string>;
+  };
+  speedupFactor: string;
+}
+
+export interface DAAMergeSortResult {
+  syllabusUnit: string;
+  algorithm: string;
+  sortBy: string;
+  elementCount: number;
+  comparisons: number;
+  elapsedMicros: number;
+  theoreticalAnalysis: Record<string, string>;
+  sortedSample: Array<{
+    id: number;
+    name: string;
+    date: string;
+    priorityScore: number;
+  }>;
+}
+
+export interface DAALcsResult {
+  syllabusUnit: string;
+  concept: string;
+  textA: string;
+  textB: string;
+  normalizedA: string;
+  normalizedB: string;
+  lcsLength: number;
+  reconstructedSubsequence: string;
+  characterSimilarityRatio: string;
+  tokenLcsSimilarityRatio: string;
+  theoreticalAnalysis: Record<string, string>;
+}
+
+export interface DAABipartiteResult {
+  syllabusUnit: string;
+  concept: string;
+  activeLostItemsCount: number;
+  activeFoundItemsCount: number;
+  candidateEdgesAboveThreshold: number;
+  maxPairsCardinality: number;
+  matchedPairs: Array<{
+    lostItemId: number;
+    lostItemName: string;
+    foundItemId: number;
+    foundItemName: string;
+    similarityScore: number;
+    confidencePercent: string;
+  }>;
+  theoreticalAnalysis: Record<string, string>;
 }
