@@ -2,6 +2,8 @@ package com.lostfound.service;
 
 import com.lostfound.model.Claim;
 import com.lostfound.model.Item;
+import com.lostfound.model.Notification;
+import com.lostfound.model.User;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -57,6 +59,26 @@ public class ClaimService {
         item.setStatus("CLAIM_PENDING");
         storage.recordAudit(claim.getClaimantEmail(), "CLAIM_SUBMITTED", "CLAIM", claimId,
                 "Submitted claim with proof details for Item #" + item.getId() + " (" + item.getName() + ")");
+
+        // Notify the person who reported the found item
+        if (item.getReporterEmail() != null && !item.getReporterEmail().equalsIgnoreCase(claim.getClaimantEmail())) {
+            String claimantDisplayName = claim.getClaimantName() != null && !claim.getClaimantName().isEmpty() 
+                    ? claim.getClaimantName() : claim.getClaimantEmail().split("@")[0];
+            Notification notif = new Notification(
+                    storage.getNextNotificationId(),
+                    item.getReporterEmail(),
+                    "New Claim Request for Your Found Item!",
+                    claimantDisplayName + " submitted an ownership claim for your found item '" + item.getName() + "'. Review their proof to accept and return.",
+                    "CLAIM_REQUESTED",
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            );
+            notif.setClaimId(claimId);
+            notif.setItemId(item.getId());
+            notif.setContactName(claimantDisplayName);
+            notif.setContactEmail(claim.getClaimantEmail());
+            notif.setContactPhone(claim.getContactPhone());
+            storage.addNotification(notif);
+        }
 
         return claim;
     }
@@ -168,6 +190,137 @@ public class ClaimService {
         // Refresh match suggestions so completed returns are excluded
         lostFoundService.findMatches();
 
+        populateItemSnapshots(claim);
+        return claim;
+    }
+
+    public synchronized Claim acceptClaimByFinder(int claimId, String finderEmail, String notes) {
+        Claim claim = storage.getClaimById(claimId);
+        if (claim == null) {
+            throw new IllegalArgumentException("Claim #" + claimId + " not found");
+        }
+        Item item = storage.getItemById(claim.getItemId());
+        if (item == null) {
+            throw new IllegalArgumentException("Associated item not found");
+        }
+
+        User finderUser = storage.getUserByEmail(finderEmail);
+        String finderName = finderUser != null && finderUser.getUsername() != null 
+                ? finderUser.getUsername() : (item.getReporterName() != null ? item.getReporterName() : finderEmail.split("@")[0]);
+        String finderPhone = item.getContactPhone() != null ? item.getContactPhone() : "";
+
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        claim.setStatus("APPROVED");
+        claim.setResolvedAt(now);
+        claim.setFinderEmail(finderEmail);
+        claim.setFinderName(finderName);
+        claim.setFinderPhone(finderPhone);
+        claim.setAdminNotes(notes != null && !notes.trim().isEmpty() ? notes.trim() : "Accepted by finder. Contact details exchanged.");
+
+        item.setStatus("CLAIM_PENDING");
+
+        // 1. Send notification to claimant with finder contact details
+        Notification claimantNotif = new Notification(
+                storage.getNextNotificationId(),
+                claim.getClaimantEmail(),
+                "Claim Accepted! Contact Details Shared",
+                finderName + " accepted your claim for '" + item.getName() + "'! Please contact them to safely arrange receiving your belongings.",
+                "CLAIM_ACCEPTED",
+                now
+        );
+        claimantNotif.setClaimId(claimId);
+        claimantNotif.setItemId(item.getId());
+        claimantNotif.setContactName(finderName);
+        claimantNotif.setContactEmail(finderEmail);
+        claimantNotif.setContactPhone(finderPhone);
+        storage.addNotification(claimantNotif);
+
+        // 2. Send confirmation notification to finder with claimant contact details
+        Notification finderNotif = new Notification(
+                storage.getNextNotificationId(),
+                finderEmail,
+                "You Accepted Claim for '" + item.getName() + "'",
+                "You accepted " + claim.getClaimantName() + "'s claim. Please contact them at " + claim.getClaimantEmail() + 
+                        (claim.getContactPhone() != null && !claim.getContactPhone().isEmpty() ? " or " + claim.getContactPhone() : "") + 
+                        " to return their belongings.",
+                "CLAIM_ACCEPTED",
+                now
+        );
+        finderNotif.setClaimId(claimId);
+        finderNotif.setItemId(item.getId());
+        finderNotif.setContactName(claim.getClaimantName());
+        finderNotif.setContactEmail(claim.getClaimantEmail());
+        finderNotif.setContactPhone(claim.getContactPhone());
+        storage.addNotification(finderNotif);
+
+        storage.recordAudit(finderEmail, "CLAIM_ACCEPTED_BY_FINDER", "CLAIM", claimId,
+                "Finder accepted claim #" + claimId + " for Item #" + item.getId() + ". Contacts exchanged.");
+
+        populateItemSnapshots(claim);
+        return claim;
+    }
+
+    public synchronized Claim confirmReceivedByOwner(int claimId, String ownerEmail) {
+        Claim claim = storage.getClaimById(claimId);
+        if (claim == null) {
+            throw new IllegalArgumentException("Claim #" + claimId + " not found");
+        }
+        Item item = storage.getItemById(claim.getItemId());
+        if (item == null) {
+            throw new IllegalArgumentException("Associated item not found");
+        }
+
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        claim.setStatus("RETURNED_HANDED_OVER");
+        claim.setResolvedAt(now);
+
+        // Mark item as returned
+        item.setStatus("RETURNED");
+
+        // Mark matched lost item as returned if present
+        if (claim.getMatchedItemId() != null && claim.getMatchedItemId() > 0) {
+            Item matched = storage.getItemById(claim.getMatchedItemId());
+            if (matched != null) {
+                matched.setStatus("RETURNED");
+            }
+        }
+
+        String claimantDisplayName = claim.getClaimantName() != null && !claim.getClaimantName().isEmpty() 
+                ? claim.getClaimantName() : ownerEmail.split("@")[0];
+
+        // 1. Notify lost owner
+        Notification ownerNotif = new Notification(
+                storage.getNextNotificationId(),
+                ownerEmail,
+                "Belongings Recovered & Case Closed!",
+                "You confirmed receiving your '" + item.getName() + "'. We are glad your belongings are back with you!",
+                "ITEM_RETURNED",
+                now
+        );
+        ownerNotif.setClaimId(claimId);
+        ownerNotif.setItemId(item.getId());
+        storage.addNotification(ownerNotif);
+
+        // 2. Notify finder
+        String finderEmail = claim.getFinderEmail() != null ? claim.getFinderEmail() : item.getReporterEmail();
+        if (finderEmail != null && !finderEmail.equalsIgnoreCase(ownerEmail)) {
+            Notification finderNotif = new Notification(
+                    storage.getNextNotificationId(),
+                    finderEmail,
+                    "Handover Confirmed: Item Returned!",
+                    claimantDisplayName + " confirmed receiving their belongings for '" + item.getName() + "'. Thank you for your honesty and help!",
+                    "ITEM_RETURNED",
+                    now
+            );
+            finderNotif.setClaimId(claimId);
+            finderNotif.setItemId(item.getId());
+            storage.addNotification(finderNotif);
+        }
+
+        storage.recordAudit(ownerEmail, "OWNER_CONFIRMED_RECEIVED", "CLAIM", claimId,
+                "Owner confirmed receipt of belongings for Claim #" + claimId + ". Item marked RETURNED.");
+
+        lostFoundService.findMatches();
         populateItemSnapshots(claim);
         return claim;
     }

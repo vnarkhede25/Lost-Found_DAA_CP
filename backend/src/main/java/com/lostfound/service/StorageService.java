@@ -4,6 +4,7 @@ import com.lostfound.model.AuditLog;
 import com.lostfound.model.Claim;
 import com.lostfound.model.Item;
 import com.lostfound.model.Match;
+import com.lostfound.model.Notification;
 import com.lostfound.model.User;
 import org.springframework.stereotype.Service;
 
@@ -22,12 +23,14 @@ public class StorageService {
     private final Map<String, User> usersByEmail = new ConcurrentHashMap<>();
     private final Map<Integer, Item> itemsById = new ConcurrentHashMap<>();
     private final Map<Integer, Claim> claimsById = new ConcurrentHashMap<>();
+    private final Map<Integer, Notification> notificationsById = new ConcurrentHashMap<>();
     private final List<Match> matches = Collections.synchronizedList(new ArrayList<>());
     private final List<AuditLog> auditLogs = Collections.synchronizedList(new ArrayList<>());
 
     private final AtomicInteger userIdSequence = new AtomicInteger(100);
     private final AtomicInteger itemIdSequence = new AtomicInteger(10);
     private final AtomicInteger claimIdSequence = new AtomicInteger(1);
+    private final AtomicInteger notificationIdSequence = new AtomicInteger(1);
     private final AtomicInteger auditIdSequence = new AtomicInteger(1);
 
     public StorageService() {
@@ -136,6 +139,32 @@ public class StorageService {
         c1.setItem(i4);
         c1.setMatchedItem(i3);
         claimsById.put(c1.getId(), c1);
+
+        // Pre-seed sample notification for Alex Morgan (possible match for AirPods)
+        Notification n1 = new Notification(
+                notificationIdSequence.getAndIncrement(),
+                "alex.morgan@university.edu",
+                "Possible Match Found!",
+                "A found item matching your lost 'Apple AirPods Pro 2nd Gen' was reported: 'White Wireless Earbuds in Black Case' by Sophia Patel at Central Library - 2nd Floor.",
+                "MATCH_FOUND",
+                "2026-10-23 11:15:00"
+        );
+        n1.setItemId(1);
+        n1.setMatchedItemId(2);
+        notificationsById.put(n1.getId(), n1);
+
+        // Pre-seed sample notification for Security Admin (claim submitted)
+        Notification n2 = new Notification(
+                notificationIdSequence.getAndIncrement(),
+                "security@university.edu",
+                "New Claim Request Received",
+                "David Kim submitted an ownership claim request for Found Item #4 (Insulated Hydro Flask Bottle).",
+                "CLAIM_REQUESTED",
+                "2026-10-25 14:30:00"
+        );
+        n2.setClaimId(c1.getId());
+        n2.setItemId(4);
+        notificationsById.put(n2.getId(), n2);
 
         recordAudit("system", "INITIAL_SETUP", "SYSTEM", 0, "Initial dataset seeded with students, items, and verification claims.");
         recordAudit("david.k@university.edu", "CLAIM_SUBMITTED", "CLAIM", c1.getId(), "Claim submitted for Found Item #4 (Water Bottle) citing sticker evidence.");
@@ -252,6 +281,61 @@ public class StorageService {
 
     public int getNextClaimId() {
         return claimIdSequence.incrementAndGet();
+    }
+
+    // Notification Operations
+    public synchronized boolean addNotification(Notification n) {
+        if (n == null) return false;
+        if (n.getId() <= 0) {
+            n.setId(notificationIdSequence.incrementAndGet());
+        }
+        if (n.getCreatedAt() == null || n.getCreatedAt().isEmpty()) {
+            n.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        }
+        notificationsById.put(n.getId(), n);
+        return true;
+    }
+
+    public List<Notification> getNotificationsByEmail(String email) {
+        if (email == null) return Collections.emptyList();
+        String target = email.trim().toLowerCase();
+        List<Notification> userNotifs = new ArrayList<>();
+        for (Notification n : notificationsById.values()) {
+            if (n.getRecipientEmail() != null && n.getRecipientEmail().equalsIgnoreCase(target)) {
+                userNotifs.add(n);
+            }
+        }
+        userNotifs.sort((a, b) -> Integer.compare(b.getId(), a.getId())); // Newest first
+        return userNotifs;
+    }
+
+    public synchronized boolean markNotificationAsRead(int id) {
+        Notification n = notificationsById.get(id);
+        if (n != null) {
+            n.setRead(true);
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void markAllNotificationsAsRead(String email) {
+        if (email == null) return;
+        String target = email.trim().toLowerCase();
+        for (Notification n : notificationsById.values()) {
+            if (n.getRecipientEmail() != null && n.getRecipientEmail().equalsIgnoreCase(target)) {
+                n.setRead(true);
+            }
+        }
+    }
+
+    public synchronized void clearNotifications(String email) {
+        if (email == null) return;
+        String target = email.trim().toLowerCase();
+        notificationsById.values().removeIf(n -> n.getRecipientEmail() != null && n.getRecipientEmail().equalsIgnoreCase(target));
+    }
+
+    public int getNextNotificationId() {
+        return notificationIdSequence.incrementAndGet();
     }
 
     // Audit Log Operations

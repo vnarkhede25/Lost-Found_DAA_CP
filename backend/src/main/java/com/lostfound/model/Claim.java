@@ -15,6 +15,11 @@ public class Claim {
     private String createdAt;
     private String resolvedAt;
 
+    // Contact details shared upon approval
+    private String finderName;
+    private String finderEmail;
+    private String finderPhone;
+
     // Attached item snapshots for UI convenience
     private Item item;
     private Item matchedItem;
@@ -81,4 +86,13 @@ public class Claim {
 
     public Item getMatchedItem() { return matchedItem; }
     public void setMatchedItem(Item matchedItem) { this.matchedItem = matchedItem; }
+
+    public String getFinderName() { return finderName; }
+    public void setFinderName(String finderName) { this.finderName = finderName; }
+
+    public String getFinderEmail() { return finderEmail; }
+    public void setFinderEmail(String finderEmail) { this.finderEmail = finderEmail; }
+
+    public String getFinderPhone() { return finderPhone; }
+    public void setFinderPhone(String finderPhone) { this.finderPhone = finderPhone; }
 }

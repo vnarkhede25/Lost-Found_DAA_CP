@@ -11,6 +11,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -343,6 +345,27 @@ public class LostFoundService {
                     m.setFoundItem(found);
                     m.setMatchReason(generateMatchReason(lost, found, score));
                     generatedMatches.add(m);
+
+                    // Notify the lost item reporter that an item matching their report was found
+                    if (lost.getReporterEmail() != null && !lost.getReporterEmail().isEmpty() && score >= 0.50) {
+                        boolean alreadyNotified = storage.getNotificationsByEmail(lost.getReporterEmail()).stream()
+                                .anyMatch(n -> n.getItemId() != null && n.getItemId() == lost.getId()
+                                        && n.getMatchedItemId() != null && n.getMatchedItemId() == found.getId());
+                        if (!alreadyNotified) {
+                            Notification mn = new Notification(
+                                    storage.getNextNotificationId(),
+                                    lost.getReporterEmail(),
+                                    "Possible Match Found for Your Lost Item!",
+                                    "A found item '" + found.getName() + "' matches your lost '" + lost.getName() + 
+                                            "' (" + Math.round(score * 100) + "% match confidence at " + found.getLocation() + "). Submit a claim if it's yours!",
+                                    "MATCH_FOUND",
+                                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                            );
+                            mn.setItemId(lost.getId());
+                            mn.setMatchedItemId(found.getId());
+                            storage.addNotification(mn);
+                        }
+                    }
                 }
             }
         }

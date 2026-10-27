@@ -84,4 +84,37 @@ public class ClaimController {
             return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/{id}/accept-peer")
+    public ResponseEntity<?> acceptClaimByFinder(@PathVariable int id, @RequestBody Map<String, String> payload) {
+        String finderEmail = payload.get("finderEmail");
+        String notes = payload.get("notes");
+        if (finderEmail == null || finderEmail.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Finder email is required"));
+        }
+        try {
+            Claim accepted = claimService.acceptClaimByFinder(id, finderEmail.trim(), notes);
+            return ResponseEntity.ok(accepted);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/confirm-received")
+    public ResponseEntity<?> confirmReceivedByOwner(@PathVariable int id, @RequestBody Map<String, String> payload) {
+        String ownerEmail = payload.get("ownerEmail");
+        if (ownerEmail == null || ownerEmail.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Owner email is required"));
+        }
+        try {
+            Claim confirmed = claimService.confirmReceivedByOwner(id, ownerEmail.trim());
+            return ResponseEntity.ok(confirmed);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
 }
