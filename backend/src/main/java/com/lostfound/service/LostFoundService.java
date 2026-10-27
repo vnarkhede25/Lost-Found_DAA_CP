@@ -381,10 +381,12 @@ public class LostFoundService {
         String foundText = (found.getName() != null ? found.getName() : "") + " " +
                            (found.getDescription() != null ? found.getDescription() : "");
 
-        double tokenLcsScore = LcsDynamicProgramming.computeTokenLcsSimilarity(lostText, foundText);
-        LcsDynamicProgramming.LcsResult titleLcs = LcsDynamicProgramming.computeLcs(lost.getName(), found.getName());
-        double combinedLcsText = (tokenLcsScore * 0.65) + (titleLcs.getSimilarityRatio() * 0.35);
-        score += combinedLcsText * 0.45;
+        // 1. Text Similarity via Dynamic Programming (LCS) + Token Set (Jaccard) (45% weight)
+        double lcsScore = LcsDynamicProgramming.computeTokenLcsSimilarity(lostText, foundText);
+        double jaccardScore = computeJaccardSimilarity(lostText, foundText);
+        // Hybrid semantic score combining DP token order (LCS) and token overlap ratio (Jaccard)
+        double textSimilarity = (lcsScore * 0.50) + (jaccardScore * 0.50);
+        score += textSimilarity * 0.45;
 
         // 2. Category match (25% weight)
         if (lost.getCategory() != null && found.getCategory() != null) {
@@ -477,6 +479,37 @@ public class LostFoundService {
         } catch (Exception e) {
             return 7;
         }
+    }
+
+    /**
+     * Preserved original Jaccard similarity calculation: J(A, B) = |A ∩ B| / |A ∪ B|.
+     * Tokenizes normalized strings into unique word sets and computes intersection over union.
+     */
+    public double computeJaccardSimilarity(String s1, String s2) {
+        if (s1 == null || s2 == null) return 0.0;
+        Set<String> set1 = tokenizeToSet(s1);
+        Set<String> set2 = tokenizeToSet(s2);
+        if (set1.isEmpty() && set2.isEmpty()) return 1.0;
+        if (set1.isEmpty() || set2.isEmpty()) return 0.0;
+
+        Set<String> intersection = new HashSet<>(set1);
+        intersection.retainAll(set2);
+
+        Set<String> union = new HashSet<>(set1);
+        union.addAll(set2);
+
+        return (double) intersection.size() / (double) union.size();
+    }
+
+    private Set<String> tokenizeToSet(String str) {
+        String[] words = str.toLowerCase().replaceAll("[^a-z0-9\\s]", " ").trim().split("\\s+");
+        Set<String> set = new HashSet<>();
+        for (String w : words) {
+            if (w.length() >= 2) {
+                set.add(w);
+            }
+        }
+        return set;
     }
 
     private List<String> tokenize(String text) {

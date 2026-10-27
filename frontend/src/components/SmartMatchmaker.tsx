@@ -45,11 +45,11 @@ export const SmartMatchmaker: React.FC<SmartMatchmakerProps> = ({
                 <Sparkles size={18} />
               </div>
               <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Smart Match Suggestions
+                Potential Matches
               </h2>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: 700, margin: 0, lineHeight: 1.5 }}>
-              Candidate reports automatically paired using <strong>Longest Common Subsequence (LCS)</strong> on normalized descriptions (45%), category agreement (25%), location proximity (20%), and date similarity (10%).
+              Candidate pairings automatically analyzed based on item descriptions, category agreement, campus dropzone proximity, and incident dates. Matches are suggestions and require ownership verification before handover.
             </p>
           </div>
 
@@ -113,10 +113,10 @@ export const SmartMatchmaker: React.FC<SmartMatchmakerProps> = ({
                     alignItems: 'center',
                     gap: 6
                   }}>
-                    <CheckCircle2 size={14} /> {scorePercent}% Algorithm Match
+                    <CheckCircle2 size={14} /> {scorePercent}% Similarity Match
                   </span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Calculated via LCS Dynamic Programming
+                    Automated Candidate Suggestion
                   </span>
                 </div>
 

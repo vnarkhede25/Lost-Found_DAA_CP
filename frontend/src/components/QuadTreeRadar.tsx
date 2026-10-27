@@ -29,148 +29,130 @@ export const QuadTreeRadar: React.FC<QuadTreeRadarProps> = ({ items, onSelectIte
   };
 
   return (
-    <div style={{ maxWidth: 1380, margin: '0 auto', padding: '0 24px 60px' }}>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px 60px' }}>
       {/* Header Banner */}
-      <div className="glass-panel" style={{ padding: '24px 30px', marginBottom: 28 }}>
+      <div className="card" style={{ padding: '24px 28px', marginBottom: 24, backgroundColor: '#ffffff' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{
                 width: 36,
                 height: 36,
-                borderRadius: 10,
-                background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--resolved-bg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
+                color: 'var(--resolved-color)'
               }}>
-                <Radio size={20} color="#fff" />
+                <Radio size={20} />
               </div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                 Spatial QuadTree 2D Campus Radar
               </h2>
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', margin: 0, maxWidth: 750 }}>
-              Click anywhere on the coordinate plane to move your search radar. The QuadTree data structure prunes
-              irrelevant bounding boxes in O(log n) time to retrieve items within your radius.
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0, maxWidth: 750 }}>
+              Click anywhere on the coordinate plane to position your search radar. The QuadTree data structure prunes
+              irrelevant bounding boxes in <strong>O(log n)</strong> time to retrieve items within your campus radius.
             </p>
           </div>
 
           {/* Quick preset locations */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => { setCenterX(25); setCenterY(48); }}
-              className="btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '6px 12px' }}
-            >
-              📍 Library (25, 48)
-            </button>
-            <button
-              onClick={() => { setCenterX(62); setCenterY(32); }}
-              className="btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '6px 12px' }}
-            >
-              📍 Gym (62, 32)
-            </button>
-            <button
-              onClick={() => { setCenterX(45); setCenterY(75); }}
-              className="btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '6px 12px' }}
-            >
-              📍 Dining Hall (45, 75)
-            </button>
-            <button
-              onClick={() => { setCenterX(80); setCenterY(20); }}
-              className="btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '6px 12px' }}
-            >
-              📍 Eng Hall (80, 20)
-            </button>
+            {[
+              { name: 'Library (25, 48)', x: 25, y: 48 },
+              { name: 'Student Gym (62, 32)', x: 62, y: 32 },
+              { name: 'Dining Courtyard (45, 75)', x: 45, y: 75 },
+              { name: 'Engineering (80, 20)', x: 80, y: 20 }
+            ].map(loc => (
+              <button
+                key={loc.name}
+                onClick={() => { setCenterX(loc.x); setCenterY(loc.y); }}
+                className="btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+              >
+                <MapPin size={12} color="var(--primary)" /> {loc.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Map on Left, Nearby List on Right */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1.3fr) minmax(300px, 1fr)', gap: 24 }}>
-        {/* Radar Map Panel */}
-        <div className="glass-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', fontWeight: 700 }}>
-              <Compass size={17} color="#38bdf8" />
-              <span>Campus Coordinate Grid [0..100, 0..100]</span>
-            </div>
-            <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>
-              Radar Center: ({centerX}, {centerY}) • Radius: {radius}m
+      {/* Grid: 2D Radar Canvas & Results */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 24 }}>
+        {/* Interactive Coordinate Canvas */}
+        <div className="card" style={{ padding: 24, backgroundColor: '#ffffff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+              Interactive Coordinate Grid (100 × 100)
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Center: ({centerX}, {centerY}) • Radius: {radius}%
             </span>
           </div>
 
-          {/* The Interactive Radar Visualizer */}
           <div
             onClick={handleMapClick}
             style={{
               position: 'relative',
               width: '100%',
-              aspectRatio: '1 / 1',
-              background: '#090d16',
-              borderRadius: 'var(--radius-md)',
-              border: '2px solid rgba(6, 182, 212, 0.3)',
-              overflow: 'hidden',
+              height: 380,
+              backgroundColor: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-lg)',
+              border: '2px solid var(--border-medium)',
               cursor: 'crosshair',
-              boxShadow: 'inset 0 0 50px rgba(6, 182, 212, 0.15)'
+              overflow: 'hidden',
+              backgroundImage: 'radial-gradient(var(--border-medium) 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
             }}
           >
-            {/* QuadTree Subdivision Lines (NW, NE, SW, SE) */}
-            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: 'rgba(255, 255, 255, 0.1)', borderTop: '1px dashed rgba(6, 182, 212, 0.3)' }} />
-            <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'rgba(255, 255, 255, 0.1)', borderLeft: '1px dashed rgba(6, 182, 212, 0.3)' }} />
+            {/* QuadTree 4 Quadrants Divider Lines */}
+            <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'rgba(79, 70, 229, 0.2)' }} />
+            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'rgba(79, 70, 229, 0.2)' }} />
 
             {/* Quadrant Labels */}
-            <span style={{ position: 'absolute', top: 8, left: 10, fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.3)' }}>NW Quadrant</span>
-            <span style={{ position: 'absolute', top: 8, right: 10, fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.3)' }}>NE Quadrant</span>
-            <span style={{ position: 'absolute', bottom: 8, left: 10, fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.3)' }}>SW Quadrant</span>
-            <span style={{ position: 'absolute', bottom: 8, right: 10, fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.3)' }}>SE Quadrant</span>
+            <span style={{ position: 'absolute', top: 8, left: 10, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>NW QUADRANT</span>
+            <span style={{ position: 'absolute', top: 8, right: 10, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>NE QUADRANT</span>
+            <span style={{ position: 'absolute', bottom: 8, left: 10, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>SW QUADRANT</span>
+            <span style={{ position: 'absolute', bottom: 8, right: 10, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>SE QUADRANT</span>
 
-            {/* Radar Radius Circle */}
+            {/* Active Radar Circle */}
             <div
               style={{
                 position: 'absolute',
-                left: `${centerX}%`,
-                top: `${centerY}%`,
+                left: `${centerX - radius}%`,
+                top: `${centerY - radius}%`,
                 width: `${radius * 2}%`,
                 height: `${radius * 2}%`,
                 borderRadius: '50%',
-                border: '2px solid rgba(6, 182, 212, 0.8)',
-                background: 'rgba(6, 182, 212, 0.08)',
-                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(79, 70, 229, 0.12)',
+                border: '2px dashed var(--primary)',
                 pointerEvents: 'none',
-                boxShadow: '0 0 20px rgba(6, 182, 212, 0.3)'
+                transition: 'all 0.2s ease'
               }}
             />
 
-            {/* Center Target Indicator */}
+            {/* Center Pin Target */}
             <div
               style={{
                 position: 'absolute',
                 left: `${centerX}%`,
                 top: `${centerY}%`,
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary)',
                 transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                boxShadow: '0 0 10px rgba(79, 70, 229, 0.6)',
+                pointerEvents: 'none'
               }}
-            >
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#38bdf8', border: '2px solid #ffffff' }} />
-            </div>
+            />
 
-            {/* Plot All Items on the Map */}
-            {items.map((item) => {
-              const x = item.latitude || 50;
-              const y = item.longitude || 50;
-              const dist = Math.hypot(x - centerX, y - centerY);
-              const isInside = dist <= radius;
-              const isLost = item.type === 'LOST';
-
+            {/* Items Pinned onto Canvas */}
+            {items.map(item => {
+              const ix = item.latitude || 50;
+              const iy = item.longitude || 50;
+              const isNearby = Math.hypot(ix - centerX, iy - centerY) <= radius;
               return (
                 <div
                   key={item.id}
@@ -181,115 +163,99 @@ export const QuadTreeRadar: React.FC<QuadTreeRadarProps> = ({ items, onSelectIte
                   title={`${item.name} (${item.location})`}
                   style={{
                     position: 'absolute',
-                    left: `${x}%`,
-                    top: `${y}%`,
+                    left: `${ix}%`,
+                    top: `${iy}%`,
+                    width: isNearby ? 16 : 10,
+                    height: isNearby ? 16 : 10,
+                    borderRadius: '50%',
+                    backgroundColor: item.type === 'LOST' ? 'var(--lost-color)' : 'var(--found-color)',
+                    border: '2px solid #ffffff',
                     transform: 'translate(-50%, -50%)',
                     cursor: 'pointer',
-                    zIndex: 10,
+                    zIndex: isNearby ? 10 : 5,
+                    boxShadow: isNearby ? '0 2px 8px rgba(0,0,0,0.25)' : 'none',
                     transition: 'all 0.2s ease'
                   }}
-                >
-                  <div
-                    style={{
-                      width: isInside ? 18 : 12,
-                      height: isInside ? 18 : 12,
-                      borderRadius: '50%',
-                      background: isLost ? 'var(--lost-gradient)' : 'var(--found-gradient)',
-                      border: isInside ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.6)',
-                      boxShadow: isInside ? (isLost ? '0 0 14px #f43f5e' : '0 0 14px #10b981') : 'none'
-                    }}
-                  />
-                </div>
+                />
               );
             })}
           </div>
 
-          {/* Radar Controls */}
-          <div style={{ marginTop: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.85rem' }}>
-              <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Sliders size={15} /> Scan Radius Slider:
-              </span>
-              <span style={{ fontWeight: 700, color: '#38bdf8' }}>{radius} units</span>
-            </div>
+          {/* Radar Radius Slider */}
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Search Radius:</span>
             <input
               type="range"
               min="10"
-              max="60"
+              max="50"
               value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#06b6d4', cursor: 'pointer' }}
+              onChange={(e) => setRadius(parseInt(e.target.value))}
+              style={{ flex: 1 }}
             />
+            <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--primary)' }}>{radius}%</span>
           </div>
         </div>
 
         {/* Nearby Items List */}
-        <div className="glass-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-              Items Inside Radar ({nearbyItems.length})
+        <div className="card" style={{ padding: 24, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+              Items Inside Radius ({nearbyItems.length})
             </h3>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              QuadTree Spatial Query
+              Pruned by QuadTree Boundary
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', maxHeight: 520, paddingRight: 4 }}>
-            {nearbyItems.length === 0 ? (
-              <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <Info size={32} style={{ marginBottom: 12 }} />
-                <p>No items found within {radius}m of ({centerX}, {centerY}).</p>
-                <p style={{ fontSize: '0.82rem' }}>Click a hotspot button or drag the radius slider.</p>
-              </div>
-            ) : (
-              nearbyItems.map((item) => (
+          {nearbyItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 10px', margin: 'auto' }}>
+              <Radio size={36} color="var(--text-muted)" style={{ margin: '0 auto 10px' }} />
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                No reported items located within this radius. Drag the center pin or click on a campus building.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 380, overflowY: 'auto' }}>
+              {nearbyItems.map(item => (
                 <div
                   key={item.id}
-                  className="glass-card"
+                  onClick={() => onSelectItem(item)}
                   style={{
-                    padding: 14,
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    cursor: 'pointer'
+                    justifyContent: 'space-between',
+                    gap: 12
                   }}
-                  onClick={() => onSelectItem(item)}
                 >
-                  <img
-                    src={item.photoUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
-                    alt={item.name}
-                    style={{ width: 55, height: 50, borderRadius: 8, objectFit: 'cover' }}
-                  />
-
-                  <div style={{ flex: 1 }}>
+                  <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                      <span className={item.type === 'LOST' ? 'badge-lost' : 'badge-found'} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                      <span className={`badge ${item.type === 'LOST' ? 'badge-lost' : 'badge-found'}`}>
                         {item.type}
                       </span>
-                      <h4 style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>{item.name}</h4>
+                      <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{item.name}</strong>
                     </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      📍 {item.location}
-                    </p>
-                    <span style={{ fontSize: '0.72rem', color: '#38bdf8' }}>
-                      Coords: ({item.latitude?.toFixed(1)}, {item.longitude?.toFixed(1)})
-                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{item.location}</span>
                   </div>
 
                   <button
-                    className="btn-secondary"
-                    style={{ padding: '6px 10px', fontSize: '0.75rem' }}
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectItem(item);
                     }}
+                    className="btn-secondary"
+                    style={{ padding: '6px 10px', fontSize: '0.76rem' }}
                   >
-                    <Eye size={13} />
+                    <Eye size={13} /> View
                   </button>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

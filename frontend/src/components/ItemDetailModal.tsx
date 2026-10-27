@@ -81,11 +81,6 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <span style={{ fontSize: '0.78rem', color: 'var(--primary)', textTransform: 'uppercase', fontWeight: 700 }}>
               {item.category}
             </span>
-            {item.reward && (
-              <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Award size={16} /> Reward: {item.reward}
-              </span>
-            )}
           </div>
 
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginBottom: 10, lineHeight: 1.3, color: 'var(--text-primary)' }}>

@@ -7,17 +7,19 @@ import { ItemExplorer } from './components/ItemExplorer';
 import { SmartMatchmaker } from './components/SmartMatchmaker';
 import { StudentActivity } from './components/StudentActivity';
 import { AdminDashboard } from './components/AdminDashboard';
-import { DAAInspector } from './components/DAAInspector';
 import { ReportModal } from './components/ReportModal';
 import { ItemDetailModal } from './components/ItemDetailModal';
 import { ClaimModal } from './components/ClaimModal';
+import { AuthModal } from './components/AuthModal';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'directory' | 'matches' | 'activity' | 'admin' | 'daa'>('directory');
+  const [activeTab, setActiveTab] = useState<'directory' | 'matches' | 'activity' | 'admin'>('directory');
   const [items, setItems] = useState<Item[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [currentUser, setCurrentUser] = useState<string>('alex.morgan@university.edu');
+  const [currentUserName, setCurrentUserName] = useState<string>('Alex Morgan');
   const [userRole, setUserRole] = useState<'STUDENT' | 'ADMIN'>('STUDENT');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +36,10 @@ export const App: React.FC = () => {
   // Claiming Modal
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [claimTargetItem, setClaimTargetItem] = useState<Item | null>(null);
+
+  // Auth Modal
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   // Pending Claims Count
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
@@ -65,6 +71,11 @@ export const App: React.FC = () => {
 
   // Actions
   const handleOpenReportModal = (type: 'LOST' | 'FOUND') => {
+    if (!isLoggedIn) {
+      setAuthModalMode('login');
+      setAuthModalOpen(true);
+      return;
+    }
     setReportModalType(type);
     setReportModalOpen(true);
   };
@@ -83,8 +94,35 @@ export const App: React.FC = () => {
   };
 
   const handleInitiateClaim = (target: Item, relatedLostItem?: Item) => {
+    if (!isLoggedIn) {
+      setAuthModalMode('login');
+      setAuthModalOpen(true);
+      return;
+    }
     setClaimTargetItem(target);
     setClaimModalOpen(true);
+  };
+
+  const handleOpenAuth = (mode: 'login' | 'register' = 'login') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+  };
+
+  const handleAuthSuccess = (user: { email: string; name: string; role: 'STUDENT' | 'ADMIN' }) => {
+    setCurrentUser(user.email);
+    setCurrentUserName(user.name);
+    setUserRole(user.role);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser('');
+    setCurrentUserName('');
+    setUserRole('STUDENT');
+    if (activeTab === 'activity' || activeTab === 'admin') {
+      setActiveTab('directory');
+    }
   };
 
   const myLostReports = items.filter(
@@ -92,16 +130,18 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
       {/* Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenReportModal={handleOpenReportModal}
         currentUser={currentUser}
-        setCurrentUser={setCurrentUser}
+        currentUserName={currentUserName}
         userRole={userRole}
-        setUserRole={setUserRole}
+        isLoggedIn={isLoggedIn}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
         pendingClaimsCount={pendingClaimsCount}
         matchesCount={matches.length}
       />
@@ -139,7 +179,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'matches' && (
-          <div style={{ paddingTop: 24 }}>
+          <div style={{ paddingTop: 28 }}>
             <SmartMatchmaker
               matches={matches}
               currentUser={currentUser}
@@ -150,25 +190,25 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'activity' && (
-          <StudentActivity
-            currentUserEmail={currentUser}
-            items={items}
-            onRefreshData={refreshAllData}
-            onEditItem={(item) => {
-              setInspectItem(item);
-            }}
-          />
+          <div style={{ paddingTop: 28 }}>
+            <StudentActivity
+              currentUserEmail={currentUser}
+              items={items}
+              onRefreshData={refreshAllData}
+              onEditItem={(item) => {
+                setInspectItem(item);
+              }}
+            />
+          </div>
         )}
 
-        {activeTab === 'admin' && (
-          <AdminDashboard
-            adminEmail={currentUser}
-            onRefreshData={refreshAllData}
-          />
-        )}
-
-        {activeTab === 'daa' && (
-          <DAAInspector />
+        {activeTab === 'admin' && userRole === 'ADMIN' && (
+          <div style={{ paddingTop: 28 }}>
+            <AdminDashboard
+              adminEmail={currentUser}
+              onRefreshData={refreshAllData}
+            />
+          </div>
         )}
       </main>
 
@@ -205,20 +245,28 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Footer */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authModalMode}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+
+      {/* Production Clean Light Theme Footer */}
       <footer style={{
         borderTop: '1px solid var(--border-subtle)',
-        padding: '24px 20px',
-        backgroundColor: 'var(--bg-secondary)',
-        fontSize: '0.82rem',
-        color: 'var(--text-muted)'
+        padding: '28px 20px',
+        backgroundColor: '#ffffff',
+        fontSize: '0.84rem',
+        color: 'var(--text-muted)',
+        marginTop: 'auto'
       }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
           <div>
-            <strong style={{ color: 'var(--text-primary)' }}>CampusFind</strong> — Official College Lost &amp; Found Platform • Course Project in Design &amp; Analysis of Algorithms (DAA)
+            <strong style={{ color: 'var(--text-primary)' }}>Lost &amp; Found</strong> — Official Campus Community Recovery Platform
           </div>
           <div>
-            Units I (Complexity Analysis) • Unit II (Merge Sort) • Unit III (LCS Dynamic Programming) • Unit V (Bipartite Matching)
+            Campus Security &amp; Student Operations Desk • Privacy &amp; Trust Assured
           </div>
         </div>
       </footer>

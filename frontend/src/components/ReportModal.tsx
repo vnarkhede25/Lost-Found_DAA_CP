@@ -46,7 +46,6 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [photoUrl, setPhotoUrl] = useState(PHOTO_PRESETS[0].url);
   const [contactPhone, setContactPhone] = useState('+1 (555) 234-5678');
-  const [reward, setReward] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -79,8 +78,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         photoUrl,
         latitude: locMatch ? locMatch.lat : 50,
         longitude: locMatch ? locMatch.lng : 50,
-        contactPhone,
-        reward: reward.trim() ? (reward.startsWith('$') ? reward : `$${reward}`) : undefined
+        contactPhone
       });
       onClose();
     } catch (err: any) {
@@ -315,19 +313,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
           </div>
 
-          {/* Reward (Optional for Lost) */}
-          {type === 'LOST' && (
-            <div style={{ marginBottom: 20 }}>
-              <label className="form-label">Optional Finder Reward</label>
-              <input
-                type="text"
-                value={reward}
-                onChange={(e) => setReward(e.target.value)}
-                placeholder="e.g. $25 coffee card, $50 cash..."
-                className="form-input"
-              />
-            </div>
-          )}
+
 
           {/* Footer Actions */}
           <div style={{

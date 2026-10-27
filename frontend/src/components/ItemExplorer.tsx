@@ -325,23 +325,6 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
                     {item.status === 'CLAIM_PENDING' ? 'CLAIM PENDING' : item.status}
                   </span>
                 </div>
-
-                {item.reward && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 12,
-                    right: 12,
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    color: '#059669',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    boxShadow: 'var(--shadow-sm)'
-                  }}>
-                    {item.reward}
-                  </div>
-                )}
               </div>
 
               {/* Card Content */}

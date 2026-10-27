@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import {
-  Search, Sparkles, PlusCircle, ShieldCheck, UserCheck, Binary,
-  Menu, X, CheckCircle2, ChevronDown
+  Search, PlusCircle, ShieldCheck, UserCheck, LogIn, LogOut,
+  Menu, X, CheckCircle2, ChevronDown, User as UserIcon
 } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'directory' | 'matches' | 'activity' | 'admin' | 'daa';
-  setActiveTab: (tab: 'directory' | 'matches' | 'activity' | 'admin' | 'daa') => void;
+  activeTab: 'directory' | 'matches' | 'activity' | 'admin';
+  setActiveTab: (tab: 'directory' | 'matches' | 'activity' | 'admin') => void;
   onOpenReportModal: (type: 'LOST' | 'FOUND') => void;
   currentUser: string;
-  setCurrentUser: (user: string) => void;
+  currentUserName: string;
   userRole: 'STUDENT' | 'ADMIN';
-  setUserRole: (role: 'STUDENT' | 'ADMIN') => void;
+  isLoggedIn: boolean;
+  onOpenAuth: (mode?: 'login' | 'register') => void;
+  onLogout: () => void;
   pendingClaimsCount: number;
   matchesCount: number;
 }
@@ -21,35 +23,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onOpenReportModal,
   currentUser,
-  setCurrentUser,
+  currentUserName,
   userRole,
-  setUserRole,
+  isLoggedIn,
+  onOpenAuth,
+  onLogout,
   pendingClaimsCount,
   matchesCount
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const users = [
-    { name: 'Alex Morgan', email: 'alex.morgan@university.edu', role: 'STUDENT' as const },
-    { name: 'Sophia Patel', email: 'sophia.p@university.edu', role: 'STUDENT' as const },
-    { name: 'David Kim', email: 'david.k@university.edu', role: 'STUDENT' as const },
-    { name: 'Campus Security Desk', email: 'security@university.edu', role: 'ADMIN' as const }
-  ];
-
-  const handleUserChange = (email: string) => {
-    setCurrentUser(email);
-    const u = users.find(x => x.email === email);
-    if (u) {
-      setUserRole(u.role);
-    }
-  };
-
   const navLinks = [
-    { id: 'directory', label: 'Browse Items', badge: null },
-    { id: 'matches', label: 'Smart Matches', badge: matchesCount > 0 ? matchesCount : null },
-    { id: 'activity', label: 'My Activity', badge: null },
-    { id: 'admin', label: 'Admin Desk', badge: pendingClaimsCount > 0 ? pendingClaimsCount : null, adminOnly: true },
-    { id: 'daa', label: 'DAA Inspector', badge: null }
+    { id: 'directory', label: 'Browse Listings', badge: null },
+    { id: 'matches', label: 'Potential Matches', badge: matchesCount > 0 ? matchesCount : null },
+    { id: 'activity', label: 'My Reports & Claims', badge: null, authRequired: true },
+    { id: 'admin', label: 'Admin Portal', badge: pendingClaimsCount > 0 ? pendingClaimsCount : null, adminOnly: true }
   ];
 
   return (
@@ -57,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      backgroundColor: 'rgba(255, 255, 255, 0.96)',
       backdropFilter: 'blur(10px)',
       borderBottom: '1px solid var(--border-subtle)',
       boxShadow: 'var(--shadow-xs)'
@@ -92,18 +80,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
                 Lost &amp; Found
               </span>
-              <span style={{
-                background: userRole === 'ADMIN' ? 'var(--pending-bg)' : 'var(--primary-bg)',
-                color: userRole === 'ADMIN' ? 'var(--pending-color)' : 'var(--primary)',
-                border: `1px solid ${userRole === 'ADMIN' ? 'var(--pending-border)' : 'var(--primary-border)'}`,
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '2px 8px',
-                textTransform: 'uppercase'
-              }}>
-                {userRole === 'ADMIN' ? 'Admin Portal' : 'Student Mode'}
-              </span>
+              {userRole === 'ADMIN' && (
+                <span style={{
+                  background: 'var(--pending-bg)',
+                  color: 'var(--pending-color)',
+                  border: '1px solid var(--pending-border)',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  textTransform: 'uppercase'
+                }}>
+                  Security Desk
+                </span>
+              )}
             </div>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, fontWeight: 500 }}>
               Campus Community Recovery
@@ -119,6 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }} className="desktop-nav">
           {navLinks.map((tab) => {
             if (tab.adminOnly && userRole !== 'ADMIN') return null;
+            if (tab.authRequired && !isLoggedIn) return null;
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -201,37 +192,78 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* User / Persona Switcher */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '5px 10px'
-          }}>
-            <UserCheck size={16} color="var(--primary)" />
-            <select
-              value={currentUser}
-              onChange={(e) => handleUserChange(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                cursor: 'pointer'
-              }}
-            >
-              {users.map(u => (
-                <option key={u.email} value={u.email}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* User Account / Auth Button */}
+          {isLoggedIn ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                padding: '6px 12px'
+              }}>
+                <div style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--primary-bg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary)'
+                }}>
+                  <UserIcon size={14} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                    {currentUserName || currentUser.split('@')[0]}
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    {currentUser}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={onLogout}
+                title="Sign Out"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 34,
+                  height: 34,
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-medium)',
+                  backgroundColor: '#ffffff',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer'
+                }}
+                aria-label="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={() => onOpenAuth('login')}
+                className="btn-secondary"
+                style={{ padding: '7px 14px', fontSize: '0.84rem' }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => onOpenAuth('register')}
+                className="btn-primary"
+                style={{ padding: '7px 14px', fontSize: '0.84rem' }}
+              >
+                Register
+              </button>
+            </div>
+          )}
 
           {/* Mobile Hamburger Toggle */}
           <button
@@ -267,6 +299,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {navLinks.map((tab) => {
               if (tab.adminOnly && userRole !== 'ADMIN') return null;
+              if (tab.authRequired && !isLoggedIn) return null;
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -317,13 +350,32 @@ export const Navbar: React.FC<NavbarProps> = ({
               <PlusCircle size={16} /> Report Lost
             </button>
             <button
-              onClick={() => { onOpenReportModal('FOUND')} ; setMobileMenuOpen(false); }}
+              onClick={() => { onOpenReportModal('FOUND'); setMobileMenuOpen(false); }}
               className="btn-primary"
               style={{ width: '100%', padding: '10px', backgroundColor: 'var(--found-color)' }}
             >
               <PlusCircle size={16} /> Report Found
             </button>
           </div>
+
+          {!isLoggedIn && (
+            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button
+                onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
+                className="btn-secondary"
+                style={{ width: '100%', padding: '10px' }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => { onOpenAuth('register'); setMobileMenuOpen(false); }}
+                className="btn-primary"
+                style={{ width: '100%', padding: '10px' }}
+              >
+                Register
+              </button>
+            </div>
+          )}
         </div>
       )}
 

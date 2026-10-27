@@ -6,6 +6,41 @@ import type {
 const API_BASE = '/api';
 
 export const apiClient = {
+  // Authentication API
+  async login(email: string, password: string):Promise<{ success: boolean; user?: any; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Invalid credentials' };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error connecting to authentication server' };
+    }
+  },
+
+  async register(username: string, email: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Registration failed' };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error connecting to registration server' };
+    }
+  },
+
   // Items API
   async getItems(params?: { type?: string; category?: string; status?: string; q?: string; sortBy?: string }): Promise<Item[]> {
     const searchParams = new URLSearchParams();

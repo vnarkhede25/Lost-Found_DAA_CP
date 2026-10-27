@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck, CheckCircle2, XCircle, PackageCheck, FileText,
-  AlertCircle, History, Clock, User, Phone, MapPin
+  AlertCircle, History, Clock, User, Phone, MapPin, ChevronRight
 } from 'lucide-react';
 import type { Claim, AuditLog, AdminOverview } from '../types';
 import { apiClient } from '../api/client';
@@ -62,7 +62,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminEmail, onRe
       await fetchAdminData();
       onRefreshData();
     } catch (err: any) {
-      alert(err.message || 'Failed to review claim');
+      alert(err.message || 'Error processing review');
     } finally {
       setIsProcessing(false);
     }
@@ -74,13 +74,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminEmail, onRe
 
     setIsProcessing(true);
     try {
-      await apiClient.confirmHandover(handoverClaim.id, handoverNotes.trim(), adminEmail);
+      await apiClient.completeHandover(handoverClaim.id, handoverNotes.trim(), adminEmail);
       setHandoverClaim(null);
-      setHandoverNotes('');
       await fetchAdminData();
       onRefreshData();
     } catch (err: any) {
-      alert(err.message || 'Failed to confirm handover');
+      alert(err.message || 'Error executing handover');
     } finally {
       setIsProcessing(false);
     }
@@ -90,483 +89,355 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ adminEmail, onRe
   const approvedClaims = claims.filter(c => c.status === 'APPROVED');
 
   return (
-    <div style={{ padding: '30px 0' }}>
-      <div className="container">
-        {/* Admin Header & Stat Cards */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  padding: '6px 12px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  borderRadius: 'var(--radius-full)',
-                  color: '#fbbf24',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}>
-                  <ShieldCheck size={14} /> AUTHORIZED CAMPUS SECURITY
-                </div>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Active operator: {adminEmail}
-                </span>
-              </div>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: 8 }}>
-                Administrative Moderation &amp; Verification Desk
-              </h2>
-            </div>
-
-            <button onClick={fetchAdminData} className="btn-secondary" style={{ fontSize: '0.82rem' }}>
-              <History size={14} /> Refresh Records
-            </button>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px 60px' }}>
+      {/* Overview Stat Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 16,
+        marginBottom: 24
+      }}>
+        <div className="card" style={{ padding: '20px 24px', backgroundColor: '#ffffff' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+            Pending Claims Review
+          </span>
+          <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--pending-color)' }}>
+            {overview ? overview.pendingClaimsCount : pendingClaims.length}
           </div>
-
-          {/* Quick Metrics */}
-          {overview && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-              <div className="card" style={{ padding: '16px 20px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Pending Verification
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: 4 }}>
-                  {overview.pendingClaimsCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Awaiting evidence review
-                </div>
-              </div>
-
-              <div className="card" style={{ padding: '16px 20px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Open Lost Reports
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--lost-color)', marginTop: 4 }}>
-                  {overview.openLostCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Students seeking items
-                </div>
-              </div>
-
-              <div className="card" style={{ padding: '16px 20px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Open Found Items
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--found-color)', marginTop: 4 }}>
-                  {overview.openFoundCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  In campus custody
-                </div>
-              </div>
-
-              <div className="card" style={{ padding: '16px 20px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Confirmed Handed Over
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#38bdf8', marginTop: 4 }}>
-                  {overview.returnedItemsCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Reunited with owners
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border-subtle)', marginBottom: 24 }}>
+        <div className="card" style={{ padding: '20px 24px', backgroundColor: '#ffffff' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+            Approved For Pickup
+          </span>
+          <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--found-color)' }}>
+            {overview ? overview.approvedClaimsCount : approvedClaims.length}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '20px 24px', backgroundColor: '#ffffff' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+            Total Items Recovered
+          </span>
+          <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--resolved-color)' }}>
+            {overview ? overview.returnedItemsCount : 0}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '20px 24px', backgroundColor: '#ffffff' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+            Active Directory Items
+          </span>
+          <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            {overview ? overview.totalActiveItems : 0}
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="card" style={{ padding: '16px 20px', marginBottom: 20, backgroundColor: '#ffffff' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveAdminTab('claims')}
-            style={{
-              padding: '10px 18px',
-              border: 'none',
-              background: 'transparent',
-              borderBottom: activeAdminTab === 'claims' ? '2px solid #f59e0b' : '2px solid transparent',
-              color: activeAdminTab === 'claims' ? '#fbbf24' : 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}
+            className={activeAdminTab === 'claims' ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.85rem' }}
           >
-            <Clock size={16} />
-            Pending Claims Review ({pendingClaims.length})
+            Review Claims ({pendingClaims.length})
           </button>
-
           <button
             onClick={() => setActiveAdminTab('handover')}
-            style={{
-              padding: '10px 18px',
-              border: 'none',
-              background: 'transparent',
-              borderBottom: activeAdminTab === 'handover' ? '2px solid #10b981' : '2px solid transparent',
-              color: activeAdminTab === 'handover' ? '#34d399' : 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}
+            className={activeAdminTab === 'handover' ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.85rem' }}
           >
-            <PackageCheck size={16} />
-            Physical Handover Station ({approvedClaims.length})
+            Handover Station ({approvedClaims.length})
           </button>
-
           <button
             onClick={() => setActiveAdminTab('audit')}
-            style={{
-              padding: '10px 18px',
-              border: 'none',
-              background: 'transparent',
-              borderBottom: activeAdminTab === 'audit' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeAdminTab === 'audit' ? '#60a5fa' : 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}
+            className={activeAdminTab === 'audit' ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.85rem' }}
           >
-            <FileText size={16} />
-            Administrative Audit Trail ({auditLogs.length})
+            Audit Trail ({auditLogs.length})
           </button>
         </div>
+      </div>
 
-        {/* TAB 1: PENDING CLAIMS */}
-        {activeAdminTab === 'claims' && (
-          <div>
-            {pendingClaims.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
-                <CheckCircle2 size={44} color="#10b981" style={{ margin: '0 auto 12px' }} />
-                <h3 style={{ fontSize: '1.2rem', marginBottom: 6 }}>All Ownership Claims Cleared</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                  There are currently no unresolved student claims awaiting verification.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {pendingClaims.map(claim => (
-                  <div key={claim.id} className="card" style={{ padding: '22px', borderLeft: '4px solid #f59e0b' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-                      {/* Left side: Claim & Claimant info */}
-                      <div style={{ flex: 1, minWidth: 280 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span className="badge badge-pending">CLAIM #{claim.id}</span>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            Filed on {claim.createdAt}
-                          </span>
-                        </div>
-
-                        <h4 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 6 }}>
-                          Claim for: {claim.item ? claim.item.name : `Item #${claim.itemId}`}
-                        </h4>
-
-                        <div style={{ display: 'flex', gap: 16, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <User size={14} /> {claim.claimantName} ({claim.claimantEmail})
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Phone size={14} /> {claim.contactPhone}
-                          </span>
-                        </div>
-
-                        {/* Secret Proof Box */}
-                        <div style={{
-                          background: 'var(--bg-primary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-md)',
-                          padding: '14px',
-                          marginTop: 8
-                        }}>
-                          <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>
-                            Submitted Evidence &amp; Unique Identifiers:
-                          </div>
-                          <p style={{ fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.6, margin: 0 }}>
-                            "{claim.descriptionProof}"
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Right side: Associated Item Info & Action Buttons */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200, alignItems: 'flex-end' }}>
-                        {claim.item && (
-                          <div style={{
-                            fontSize: '0.82rem',
-                            textAlign: 'right',
-                            background: 'var(--bg-surface)',
-                            padding: '8px 12px',
-                            borderRadius: 'var(--radius-md)'
-                          }}>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>Found Location</div>
-                            <div style={{ fontWeight: 600 }}>{claim.item.location}</div>
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                          <button
-                            onClick={() => {
-                              setReviewingClaim(claim);
-                              setReviewDecision('REJECTED');
-                              setAdminNotes('');
-                            }}
-                            className="btn-secondary"
-                            style={{ color: 'var(--lost-color)', borderColor: 'var(--lost-border)' }}
-                          >
-                            <XCircle size={15} /> Reject
-                          </button>
-                          <button
-                            onClick={() => {
-                              setReviewingClaim(claim);
-                              setReviewDecision('APPROVED');
-                              setAdminNotes('Evidence matches item serial number and distinguishing characteristics.');
-                            }}
-                            className="btn-primary"
-                            style={{ backgroundColor: '#059669' }}
-                          >
-                            <CheckCircle2 size={15} /> Approve Claim
-                          </button>
-                        </div>
-                      </div>
+      {/* Tab 1: Claims Review */}
+      {activeAdminTab === 'claims' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {pendingClaims.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#ffffff' }}>
+              <CheckCircle2 size={40} color="var(--found-color)" style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 }}>All Claims Processed</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0 }}>
+                There are currently no pending ownership verification claims awaiting review.
+              </p>
+            </div>
+          ) : (
+            pendingClaims.map((claim) => (
+              <div
+                key={claim.id}
+                className="card"
+                style={{
+                  padding: '20px 24px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <span className="badge badge-pending">Pending Review</span>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: 8, marginBottom: 2 }}>
+                      Claim #{claim.id} on Item #{claim.itemId}
+                    </h3>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      Claimant: <strong>{claim.claimantName}</strong> ({claim.claimantEmail}) • {claim.claimantPhone}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* TAB 2: HANDOVER STATION */}
-        {activeAdminTab === 'handover' && (
-          <div>
-            <div style={{ marginBottom: 16, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Claims approved by security. Verify student identity in person at the campus security office and confirm physical handover.
-            </div>
-
-            {approvedClaims.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '48px 20px' }}>
-                <PackageCheck size={44} color="#3b82f6" style={{ margin: '0 auto 12px' }} />
-                <h3 style={{ fontSize: '1.2rem', marginBottom: 6 }}>No Pending Pickups</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                  All approved items have been handed over to their verified owners.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {approvedClaims.map(claim => (
-                  <div key={claim.id} className="card" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                            READY FOR HANDOVER
-                          </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Claim #{claim.id}</span>
-                        </div>
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                          {claim.item ? claim.item.name : `Item #${claim.itemId}`}
-                        </h4>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                          Owner: <strong>{claim.claimantName}</strong> ({claim.claimantEmail}) • Phone: {claim.contactPhone}
-                        </div>
-                        {claim.adminNotes && (
-                          <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 4 }}>
-                            Approval Note: <em>{claim.adminNotes}</em>
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setHandoverClaim(claim);
-                          setHandoverNotes('Student College ID verified. Physical custody transferred.');
-                        }}
-                        className="btn-primary"
-                        style={{ backgroundColor: '#2563eb' }}
-                      >
-                        <PackageCheck size={16} /> Confirm Handover &amp; Close Report
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: AUDIT TRAIL */}
-        {activeAdminTab === 'audit' && (
-          <div className="card" style={{ padding: '20px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16 }}>
-              Security &amp; Chain-of-Custody Audit Log
-            </h4>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-medium)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '10px 12px' }}>Timestamp</th>
-                    <th style={{ padding: '10px 12px' }}>Actor</th>
-                    <th style={{ padding: '10px 12px' }}>Action</th>
-                    <th style={{ padding: '10px 12px' }}>Target</th>
-                    <th style={{ padding: '10px 12px' }}>Event Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditLogs.map(log => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                        {log.timestamp}
-                      </td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{log.actorEmail}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          background: log.action.includes('APPROVED') || log.action.includes('HANDED') ? 'rgba(16, 185, 129, 0.15)' :
-                                      log.action.includes('REJECTED') ? 'rgba(244, 63, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                          color: log.action.includes('APPROVED') || log.action.includes('HANDED') ? '#34d399' :
-                                 log.action.includes('REJECTED') ? '#f43f5e' : '#60a5fa'
-                        }}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
-                        {log.targetType} #{log.targetId}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{log.details}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* REVIEW MODAL */}
-        {reviewingClaim && (
-          <div className="modal-overlay" onClick={() => setReviewingClaim(null)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                  {reviewDecision === 'APPROVED' ? 'Approve Ownership Claim' : 'Reject Ownership Claim'}
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Claim #{reviewingClaim.id} for {reviewingClaim.item?.name}
-                </p>
-              </div>
-
-              <form onSubmit={handleReviewSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                    Recorded Administrative Reason *
-                  </label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={adminNotes}
-                    onChange={e => setAdminNotes(e.target.value)}
-                    placeholder={reviewDecision === 'APPROVED' ? 'State evidence verified (e.g. serial number match, photo receipt match)' : 'State reason for rejection (e.g. proof does not match physical item markings)'}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                  <button type="button" onClick={() => setReviewingClaim(null)} className="btn-secondary" disabled={isProcessing}>
-                    Cancel
-                  </button>
                   <button
-                    type="submit"
-                    className="btn-primary"
-                    style={{ backgroundColor: reviewDecision === 'APPROVED' ? '#059669' : '#e11d48' }}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? 'Recording...' : `Confirm ${reviewDecision}`}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* HANDOVER MODAL */}
-        {handoverClaim && (
-          <div className="modal-overlay" onClick={() => setHandoverClaim(null)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                  Confirm Physical Handover
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Transferring custody of Item #{handoverClaim.itemId} to {handoverClaim.claimantName}
-                </p>
-              </div>
-
-              <form onSubmit={handleHandoverSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                    Handover Notes &amp; Identity Verification *
-                  </label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={handoverNotes}
-                    onChange={e => setHandoverNotes(e.target.value)}
-                    placeholder="e.g., Student ID card inspected, item tested and custody transferred at security desk."
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.88rem'
+                    onClick={() => {
+                      setReviewingClaim(claim);
+                      setReviewDecision('APPROVED');
+                      setAdminNotes('Secret proof verified against physical found item.');
                     }}
-                  />
+                    className="btn-primary"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    Moderate Claim
+                  </button>
                 </div>
 
                 <div style={{
-                  padding: '12px',
-                  background: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid var(--primary-border)',
+                  padding: '12px 16px',
+                  backgroundColor: 'var(--bg-surface)',
                   borderRadius: 'var(--radius-md)',
-                  fontSize: '0.8rem',
-                  color: '#93c5fd'
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.86rem'
                 }}>
-                  Confirming handover will mark this report as <strong>RETURNED</strong> and close all associated claim records.
+                  <strong style={{ display: 'block', color: 'var(--text-primary)', marginBottom: 2 }}>Submitted Secret Proof:</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>{claim.secretProof}</span>
                 </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                  <button type="button" onClick={() => setHandoverClaim(null)} className="btn-secondary" disabled={isProcessing}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-primary" disabled={isProcessing}>
-                    {isProcessing ? 'Finalizing Handover...' : 'Confirm Delivery & Close Item'}
+      {/* Tab 2: Handover Station */}
+      {activeAdminTab === 'handover' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {approvedClaims.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#ffffff' }}>
+              <PackageCheck size={40} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 }}>No Handover Pickups Ready</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0 }}>
+                Approved claims ready for physical pickup desk handover will show here.
+              </p>
+            </div>
+          ) : (
+            approvedClaims.map((claim) => (
+              <div
+                key={claim.id}
+                className="card"
+                style={{
+                  padding: '20px 24px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <span className="badge badge-found">Ready For Pickup</span>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: 8, marginBottom: 2 }}>
+                      Approved Claim #{claim.id} for Item #{claim.itemId}
+                    </h3>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      Authorized Claimant: <strong>{claim.claimantName}</strong> ({claim.claimantEmail})
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setHandoverClaim(claim)}
+                    className="btn-primary"
+                    style={{ backgroundColor: 'var(--found-color)', fontSize: '0.85rem' }}
+                  >
+                    <PackageCheck size={16} /> Confirm Handover
                   </button>
                 </div>
-              </form>
-            </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Security Audit Trail */}
+      {activeAdminTab === 'audit' && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden', backgroundColor: '#ffffff' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--text-secondary)' }}>Timestamp</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--text-secondary)' }}>Action</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--text-secondary)' }}>Target</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--text-secondary)' }}>Actor</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--text-secondary)' }}>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.slice(0, 50).map((log) => (
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '12px 18px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                    <td style={{ padding: '12px 18px', fontWeight: 700, color: 'var(--primary)' }}>
+                      {log.action}
+                    </td>
+                    <td style={{ padding: '12px 18px' }}>
+                      {log.targetType} #{log.targetId}
+                    </td>
+                    <td style={{ padding: '12px 18px', color: 'var(--text-secondary)' }}>
+                      {log.actorEmail}
+                    </td>
+                    <td style={{ padding: '12px 18px', color: 'var(--text-secondary)' }}>
+                      {log.details}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewingClaim && (
+        <div className="modal-overlay" onClick={() => setReviewingClaim(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540, backgroundColor: '#ffffff' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                Moderate Claim #{reviewingClaim.id}
+              </h3>
+            </div>
+            <form onSubmit={handleReviewSubmit} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label">Review Decision</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setReviewDecision('APPROVED')}
+                    style={{
+                      padding: '10px',
+                      borderRadius: 'var(--radius-md)',
+                      border: reviewDecision === 'APPROVED' ? '2px solid var(--found-color)' : '1px solid var(--border-medium)',
+                      backgroundColor: reviewDecision === 'APPROVED' ? 'var(--found-bg)' : '#ffffff',
+                      color: reviewDecision === 'APPROVED' ? 'var(--found-color)' : 'var(--text-secondary)',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Approve Claim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewDecision('REJECTED')}
+                    style={{
+                      padding: '10px',
+                      borderRadius: 'var(--radius-md)',
+                      border: reviewDecision === 'REJECTED' ? '2px solid var(--lost-color)' : '1px solid var(--border-medium)',
+                      backgroundColor: reviewDecision === 'REJECTED' ? 'var(--lost-bg)' : '#ffffff',
+                      color: reviewDecision === 'REJECTED' ? 'var(--lost-color)' : 'var(--text-secondary)',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Reject Claim
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label className="form-label">Administrative Notes *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Record why this claim was approved or rejected..."
+                  className="form-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewingClaim(null)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="btn-primary"
+                  style={{
+                    backgroundColor: reviewDecision === 'APPROVED' ? 'var(--found-color)' : 'var(--lost-color)'
+                  }}
+                >
+                  {isProcessing ? 'Saving...' : 'Record Decision'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Handover Modal */}
+      {handoverClaim && (
+        <div className="modal-overlay" onClick={() => setHandoverClaim(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540, backgroundColor: '#ffffff' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                Authorize Handover for Claim #{handoverClaim.id}
+              </h3>
+            </div>
+            <form onSubmit={handleHandoverSubmit} style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                Please confirm that student <strong>{handoverClaim.claimantName}</strong> presented valid photo identification before delivering Item #{handoverClaim.itemId}.
+              </p>
+
+              <div style={{ marginBottom: 20 }}>
+                <label className="form-label">Handover Verification Notes</label>
+                <input
+                  type="text"
+                  required
+                  value={handoverNotes}
+                  onChange={(e) => setHandoverNotes(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setHandoverClaim(null)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="btn-primary"
+                  style={{ backgroundColor: 'var(--found-color)' }}
+                >
+                  {isProcessing ? 'Processing...' : 'Complete Official Handover'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

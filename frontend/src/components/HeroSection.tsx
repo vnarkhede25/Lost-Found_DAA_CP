@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, PlusCircle, ShieldCheck, MapPin, X, ArrowRight,
-  FileText, CheckCircle2, Sparkles, Compass
+  FileText, CheckCircle2, Sparkles, Compass, BellRing
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
@@ -50,58 +50,67 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   return (
     <div style={{
-      padding: '48px 20px 24px',
+      padding: '54px 20px 30px',
       maxWidth: 1280,
       margin: '0 auto',
       textAlign: 'center'
     }}>
-      {/* Platform Badge */}
+      {/* Platform Badge with Glow */}
       <div style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: 'var(--primary-bg)',
-        border: '1px solid var(--primary-border)',
-        padding: '6px 16px',
+        background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(99, 102, 241, 0.15) 100%)',
+        border: '1.5px solid var(--primary-border)',
+        padding: '7px 18px',
         borderRadius: 'var(--radius-full)',
-        marginBottom: 20
+        marginBottom: 24,
+        boxShadow: '0 2px 10px rgba(79, 70, 229, 0.1)'
       }}>
         <ShieldCheck size={16} color="var(--primary)" />
-        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)' }}>
-          Official College Lost &amp; Found Portal
+        <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.02em' }}>
+          Official University Campus Lost &amp; Found Portal
         </span>
       </div>
 
-      {/* Main Headline */}
+      {/* Main Headline with High-Impact Gradient Accent */}
       <h1 style={{
-        fontSize: 'clamp(2.1rem, 4vw, 3.2rem)',
-        fontWeight: 800,
-        lineHeight: 1.15,
-        marginBottom: 16,
+        fontSize: 'clamp(2.4rem, 4.6vw, 3.8rem)',
+        fontWeight: 900,
+        lineHeight: 1.12,
+        marginBottom: 18,
         color: 'var(--text-primary)',
-        letterSpacing: '-0.03em'
+        letterSpacing: '-0.04em'
       }}>
         Lost something on campus? <br />
-        <span style={{ color: 'var(--primary)' }}>We'll help you find it.</span>
+        <span style={{
+          background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          display: 'inline-block'
+        }}>
+          We'll help you recover it.
+        </span>
       </h1>
 
       <p style={{
-        maxWidth: 640,
-        margin: '0 auto 32px',
-        fontSize: '1.05rem',
+        maxWidth: 660,
+        margin: '0 auto 36px',
+        fontSize: '1.08rem',
         color: 'var(--text-secondary)',
-        lineHeight: 1.6
+        lineHeight: 1.65,
+        fontWeight: 450
       }}>
-        Connect with fellow students and campus security. Report missing belongings, browse recovered items, and verify ownership securely.
+        Search campus dropzones, discover verified listings, and safely recover your lost belongings with authorized security coordination.
       </p>
 
-      {/* Prominent Search Bar */}
+      {/* Prominent Search Bar with Dynamic Focus Glow */}
       <div
         ref={dropdownRef}
         style={{
           position: 'relative',
-          maxWidth: 680,
-          margin: '0 auto 28px'
+          maxWidth: 720,
+          margin: '0 auto 34px'
         }}
       >
         <div style={{
@@ -109,12 +118,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           display: 'flex',
           alignItems: 'center',
           backgroundColor: '#ffffff',
-          border: '1px solid var(--border-medium)',
+          border: '1.5px solid var(--border-medium)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-md)',
-          transition: 'all 0.2s ease'
+          transition: 'all 0.25s ease'
         }}>
-          <Search size={20} color="var(--text-muted)" style={{ position: 'absolute', left: 18 }} />
+          <Search size={22} color="var(--primary)" style={{ position: 'absolute', left: 20 }} />
           <input
             type="text"
             value={searchQuery}
@@ -125,14 +134,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 setIsOpen(false);
               }
             }}
-            placeholder="Search by keyword, item type, or campus building..."
+            placeholder="Search by keyword, item type, or campus building (e.g. 'AirPods', 'Library', 'Hydro Flask')..."
             style={{
               width: '100%',
-              padding: '16px 48px 16px 50px',
+              padding: '18px 52px 18px 56px',
               backgroundColor: 'transparent',
               border: 'none',
               outline: 'none',
-              fontSize: '1rem',
+              fontSize: '1.02rem',
+              fontWeight: 500,
               color: 'var(--text-primary)',
               borderRadius: 'var(--radius-lg)'
             }}
@@ -145,15 +155,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               }}
               style={{
                 position: 'absolute',
-                right: 16,
-                background: 'transparent',
+                right: 18,
+                background: 'var(--bg-surface)',
                 border: 'none',
+                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 color: 'var(--text-muted)',
                 cursor: 'pointer'
               }}
               aria-label="Clear search input"
             >
-              <X size={18} />
+              <X size={15} />
             </button>
           )}
         </div>
@@ -162,27 +178,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         {isOpen && suggestions.length > 0 && (
           <div style={{
             position: 'absolute',
-            top: 'calc(100% + 8px)',
+            top: 'calc(100% + 10px)',
             left: 0,
             right: 0,
             backgroundColor: '#ffffff',
-            border: '1px solid var(--border-subtle)',
+            border: '1.5px solid var(--border-subtle)',
             borderRadius: 'var(--radius-lg)',
             boxShadow: 'var(--shadow-xl)',
             zIndex: 50,
             textAlign: 'left',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            animation: 'slideUp 0.18s ease-out'
           }}>
             <div style={{
-              padding: '10px 16px',
-              fontSize: '0.75rem',
+              padding: '12px 18px',
+              fontSize: '0.74rem',
               color: 'var(--text-muted)',
               textTransform: 'uppercase',
-              fontWeight: 700,
+              fontWeight: 800,
+              letterSpacing: '0.06em',
               backgroundColor: 'var(--bg-surface)',
               borderBottom: '1px solid var(--border-subtle)'
             }}>
-              Suggested Keywords
+              Suggested Campus Keywords
             </div>
             {suggestions.map((s, idx) => (
               <div
@@ -193,117 +211,122 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   setIsOpen(false);
                 }}
                 style={{
-                  padding: '12px 18px',
-                  fontSize: '0.92rem',
+                  padding: '14px 20px',
+                  fontSize: '0.94rem',
                   color: 'var(--text-primary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  gap: 12,
                   borderBottom: idx < suggestions.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                  transition: 'background-color 0.1s ease'
+                  transition: 'background-color 0.12s ease'
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-surface)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <Search size={15} color="var(--primary)" />
-                <span style={{ fontWeight: 500 }}>{s}</span>
+                <Search size={16} color="var(--primary)" />
+                <span style={{ fontWeight: 600 }}>{s}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Main Actions */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 48 }}>
+      {/* Main Actions with Elevated Gradients */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 54 }}>
         <button
           onClick={() => onOpenReportModal('LOST')}
           className="btn-destructive"
-          style={{ padding: '12px 24px', fontSize: '0.95rem' }}
+          style={{ padding: '14px 28px', fontSize: '0.98rem' }}
         >
-          <PlusCircle size={18} /> Report a Lost Item
+          <PlusCircle size={20} /> Report a Lost Item
         </button>
 
         <button
           onClick={() => onOpenReportModal('FOUND')}
           className="btn-primary"
-          style={{ padding: '12px 24px', fontSize: '0.95rem', backgroundColor: 'var(--found-color)' }}
+          style={{
+            padding: '14px 28px',
+            fontSize: '0.98rem',
+            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+            boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
+          }}
         >
-          <PlusCircle size={18} /> Report a Found Item
+          <PlusCircle size={20} /> Report a Found Item
         </button>
       </div>
 
-      {/* 3 Simple Steps Section */}
+      {/* 3 Step Interactive Process Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: 20,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: 24,
         textAlign: 'left',
         marginBottom: 20
       }}>
-        <div className="card" style={{ padding: '22px 24px' }}>
+        <div className="card" style={{ padding: '26px 28px', borderTop: '4px solid #4f46e5' }}>
           <div style={{
-            width: 36,
-            height: 36,
+            width: 42,
+            height: 42,
             borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--primary-bg)',
             color: 'var(--primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1rem',
-            marginBottom: 12
+            fontWeight: 900,
+            fontSize: '1.15rem',
+            marginBottom: 14
           }}>
             1
           </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>Report in Seconds</h3>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-            Submit details, location, and photos of lost or found belongings across campus.
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 8 }}>Report in Seconds</h3>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            Submit item details, photo previews, and campus dropzones to instantly publish your listing.
           </p>
         </div>
 
-        <div className="card" style={{ padding: '22px 24px' }}>
+        <div className="card" style={{ padding: '26px 28px', borderTop: '4px solid #f59e0b' }}>
           <div style={{
-            width: 36,
-            height: 36,
+            width: 42,
+            height: 42,
             borderRadius: 'var(--radius-md)',
             backgroundColor: '#fef3c7',
             color: '#d97706',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1rem',
-            marginBottom: 12
+            fontWeight: 900,
+            fontSize: '1.15rem',
+            marginBottom: 14
           }}>
             2
           </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>Intelligent Matching</h3>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-            LCS algorithms analyze descriptions and locations to highlight high-confidence matches.
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 8 }}>Automated Discovery</h3>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            Intelligent candidate matching links lost and found descriptions without exposing personal information.
           </p>
         </div>
 
-        <div className="card" style={{ padding: '22px 24px' }}>
+        <div className="card" style={{ padding: '26px 28px', borderTop: '4px solid #10b981' }}>
           <div style={{
-            width: 36,
-            height: 36,
+            width: 42,
+            height: 42,
             borderRadius: 'var(--radius-md)',
             backgroundColor: '#d1fae5',
             color: '#059669',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1rem',
-            marginBottom: 12
+            fontWeight: 900,
+            fontSize: '1.15rem',
+            marginBottom: 14
           }}>
             3
           </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>Verified Handover</h3>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-            Campus security confirms physical ownership proofs before authorizing safe returns.
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 8 }}>Verified Handover</h3>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            Secret identifying proofs and campus security physical verification ensure safe, authorized recovery.
           </p>
         </div>
       </div>
