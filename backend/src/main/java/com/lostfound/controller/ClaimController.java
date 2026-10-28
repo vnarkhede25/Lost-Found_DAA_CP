@@ -85,6 +85,47 @@ public class ClaimController {
         }
     }
 
+    @PostMapping("/{id}/verify-and-share")
+    public ResponseEntity<?> verifyAndShareByFinder(@PathVariable int id, @RequestBody Map<String, Object> payload) {
+        String finderEmail = (String) payload.get("finderEmail");
+        Boolean isCorrect = payload.get("isCorrect") != null ? (Boolean) payload.get("isCorrect") : true;
+        Boolean sharePhone = payload.get("sharePhone") != null ? (Boolean) payload.get("sharePhone") : false;
+        Boolean shareEmail = payload.get("shareEmail") != null ? (Boolean) payload.get("shareEmail") : false;
+        String notes = (String) payload.get("notes");
+
+        if (finderEmail == null || finderEmail.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Finder email is required"));
+        }
+        try {
+            Claim result = claimService.verifyAndShareByFinder(id, finderEmail.trim(), isCorrect, sharePhone, shareEmail, notes);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/claimant-share-contact")
+    public ResponseEntity<?> claimantShareContact(@PathVariable int id, @RequestBody Map<String, Object> payload) {
+        String claimantEmail = (String) payload.get("claimantEmail");
+        Boolean shareContact = payload.get("shareContact") != null ? (Boolean) payload.get("shareContact") : true;
+        Boolean sharePhone = payload.get("sharePhone") != null ? (Boolean) payload.get("sharePhone") : false;
+        Boolean shareEmail = payload.get("shareEmail") != null ? (Boolean) payload.get("shareEmail") : false;
+
+        if (claimantEmail == null || claimantEmail.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Claimant email is required"));
+        }
+        try {
+            Claim result = claimService.claimantShareContact(id, claimantEmail.trim(), shareContact, sharePhone, shareEmail);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/accept-peer")
     public ResponseEntity<?> acceptClaimByFinder(@PathVariable int id, @RequestBody Map<String, String> payload) {
         String finderEmail = payload.get("finderEmail");

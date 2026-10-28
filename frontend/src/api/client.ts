@@ -1,20 +1,29 @@
 import type {
-  Item, Match, Claim, AuditLog, AdminOverview,
+  Item, Match, Claim, Notification, AuditLog, AdminOverview,
   DAASearchBenchmark, DAAMergeSortResult, DAALcsResult, DAABipartiteResult
 } from '../types';
 
 const API_BASE = '/api';
 
+async function parseJsonResponse(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text || `HTTP ${res.status}: ${res.statusText}` };
+  }
+}
+
 export const apiClient = {
   // Authentication API
-  async login(email: string, password: string):Promise<{ success: boolean; user?: any; error?: string }> {
+  async login(email: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         return { success: false, error: data.error || 'Invalid credentials' };
       }
@@ -31,7 +40,7 @@ export const apiClient = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         return { success: false, error: data.error || 'Registration failed' };
       }
@@ -52,7 +61,10 @@ export const apiClient = {
 
     try {
       const res = await fetch(`${API_BASE}/items?${searchParams.toString()}`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await parseJsonResponse(res);
+        if (Array.isArray(data)) return data;
+      }
     } catch (err) {
       console.warn('Backend fetch failed, returning empty items array:', err);
     }
@@ -207,6 +219,110 @@ export const apiClient = {
       throw new Error(err.error || 'Failed to confirm physical handover');
     }
     return await res.json();
+  },
+
+  async verifyAndShareClaim(
+    id: number,
+    finderEmail: string,
+    isCorrect: boolean,
+    sharePhone: boolean,
+    shareEmail: boolean,
+    notes?: string
+  ): Promise<Claim> {
+    const res = await fetch(`${API_BASE}/claims/${id}/verify-and-share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderEmail, isCorrect, sharePhone, shareEmail, notes }),
+    });
+    if (!res.ok) {
+      const err = await parseJsonResponse(res);
+      throw new Error(err.error || 'Failed to verify claim');
+    }
+    return await res.json();
+  },
+
+  async claimantShareContact(
+    id: number,
+    claimantEmail: string,
+    shareContact: boolean,
+    sharePhone: boolean,
+    shareEmail: boolean
+  ): Promise<Claim> {
+    const res = await fetch(`${API_BASE}/claims/${id}/claimant-share-contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claimantEmail, shareContact, sharePhone, shareEmail }),
+    });
+    if (!res.ok) {
+      const err = await parseJsonResponse(res);
+      throw new Error(err.error || 'Failed to submit contact sharing preferences');
+    }
+    return await res.json();
+  },
+
+  async acceptPeerClaim(id: number, finderEmail: string, notes?: string): Promise<Claim> {
+    const res = await fetch(`${API_BASE}/claims/${id}/accept-peer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderEmail, notes }),
+    });
+    if (!res.ok) {
+      const err = await parseJsonResponse(res);
+      throw new Error(err.error || 'Failed to accept claim');
+    }
+    return await res.json();
+  },
+
+  async confirmReceived(id: number, ownerEmail: string): Promise<Claim> {
+    const res = await fetch(`${API_BASE}/claims/${id}/confirm-received`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerEmail }),
+    });
+    if (!res.ok) {
+      const err = await parseJsonResponse(res);
+      throw new Error(err.error || 'Failed to confirm received');
+    }
+    return await res.json();
+  },
+
+  // Notifications API
+  async getNotifications(email: string): Promise<Notification[]> {
+    if (!email) return [];
+    try {
+      const res = await fetch(`${API_BASE}/notifications?email=${encodeURIComponent(email)}`);
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.warn('Failed to fetch notifications:', err);
+    }
+    return [];
+  },
+
+  async markNotificationRead(id: number): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/notifications/${id}/read`, { method: 'POST' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  async markAllNotificationsRead(email: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/notifications/read-all?email=${encodeURIComponent(email)}`, { method: 'POST' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  async clearNotifications(email: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/notifications?email=${encodeURIComponent(email)}`, { method: 'DELETE' });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
   // Admin Overview & Audit Logs

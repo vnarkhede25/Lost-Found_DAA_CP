@@ -47,11 +47,11 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px 60px' }}>
+    <div className="explorer-container" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px 60px' }}>
       {/* Filter and Control Bar */}
-      <div className="card" style={{ padding: '20px 24px', marginBottom: 24, backgroundColor: '#ffffff' }}>
+      <div className="card explorer-filter-card" style={{ padding: '20px 24px', marginBottom: 24, backgroundColor: '#ffffff' }}>
         {/* Category Filter Pills */}
-        <div style={{
+        <div className="category-scroll-pills" style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -171,7 +171,7 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
                   width: 'auto'
                 }}
               >
-                <option value="date">Date (MergeSort)</option>
+                <option value="date">Date (Newest)</option>
                 <option value="name">Item Name</option>
                 <option value="status">Status</option>
               </select>
@@ -258,29 +258,35 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
             <AlertCircle size={28} />
           </div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 8 }}>
-            No Matching Items Found
+            {selectedCategory === 'ALL' && selectedType === 'ALL' && selectedStatus === 'ALL'
+              ? 'No Reported Items Yet'
+              : 'No Matching Items Found'}
           </h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto 20px' }}>
-            We couldn't find any items matching your active search or filters. Try choosing a different category or clearing search terms.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 440, margin: '0 auto 20px' }}>
+            {selectedCategory === 'ALL' && selectedType === 'ALL' && selectedStatus === 'ALL'
+              ? 'Only real items reported by verified campus users are displayed here. Start by reporting a lost or found item!'
+              : 'We couldn’t find any items matching your active search or filters. Try choosing a different category or clearing filters.'}
           </p>
-          <button
-            onClick={() => {
-              setSelectedCategory('ALL');
-              setSelectedType('ALL');
-              setSelectedStatus('ALL');
-            }}
-            className="btn-secondary"
-          >
-            Clear All Filters
-          </button>
+          {(selectedCategory !== 'ALL' || selectedType !== 'ALL' || selectedStatus !== 'ALL') && (
+            <button
+              onClick={() => {
+                setSelectedCategory('ALL');
+                setSelectedType('ALL');
+                setSelectedStatus('ALL');
+              }}
+              className="btn-secondary"
+            >
+              Clear All Filters
+            </button>
+          )}
         </div>
       )}
 
       {/* Grid View */}
       {viewMode === 'grid' && items.length > 0 && (
-        <div style={{
+        <div className="items-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: 20
         }}>
           {items.map((item) => (
@@ -425,7 +431,7 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
           {items.map((item) => (
             <div
               key={item.id}
-              className="card"
+              className="card item-list-card"
               style={{
                 padding: '16px 20px',
                 display: 'flex',
@@ -436,7 +442,7 @@ export const ItemExplorer: React.FC<ItemExplorerProps> = ({
                 flexWrap: 'wrap'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 260 }}>
+              <div className="item-list-info" style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: '1 1 220px' }}>
                 <img
                   src={item.photoUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
                   alt={item.name}

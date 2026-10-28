@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import type { Item, Match } from './types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { Item, Match, Notification } from './types';
 import { apiClient } from './api/client';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
@@ -11,15 +11,36 @@ import { ReportModal } from './components/ReportModal';
 import { ItemDetailModal } from './components/ItemDetailModal';
 import { ClaimModal } from './components/ClaimModal';
 import { AuthModal } from './components/AuthModal';
+import { NotificationDrawer } from './components/NotificationDrawer';
+import { NotificationPopup } from './components/NotificationPopup';
+
+const getStoredAuth = () => {
+  try {
+    const raw = localStorage.getItem('lostfound_auth');
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore corrupted item
+  }
+  return null;
+};
 
 export const App: React.FC = () => {
+  const initialAuth = getStoredAuth();
   const [activeTab, setActiveTab] = useState<'directory' | 'matches' | 'activity' | 'admin'>('directory');
   const [items, setItems] = useState<Item[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [currentUser, setCurrentUser] = useState<string>('alex.morgan@university.edu');
-  const [currentUserName, setCurrentUserName] = useState<string>('Alex Morgan');
-  const [userRole, setUserRole] = useState<'STUDENT' | 'ADMIN'>('STUDENT');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<string>(initialAuth?.email || '');
+  const [currentUserName, setCurrentUserName] = useState<string>(initialAuth?.name || '');
+  const [userRole, setUserRole] = useState<'STUDENT' | 'ADMIN'>(initialAuth?.role || 'STUDENT');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!(initialAuth && initialAuth.email));
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [activePopupNotification, setActivePopupNotification] = useState<Notification | null>(null);
+
+  const knownNotificationIdsRef = useRef<Set<number>>(new Set());
+  const initialLoadDoneRef = useRef<boolean>(false);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +65,7 @@ export const App: React.FC = () => {
   // Pending Claims Count
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
 
-  const refreshAllData = async () => {
+  const refreshAllData = useCallback(async () => {
     try {
       const [fetchedItems, fetchedMatches, claims] = await Promise.all([
         apiClient.getItems({
@@ -63,19 +84,69 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to load data:', err);
     }
-  };
+  }, [searchQuery, selectedCategory, selectedType, selectedStatus, sortBy]);
+
+  const fetchUserNotifications = useCallback(async () => {
+    const activeEmail = currentUser || getStoredAuth()?.email;
+    if (!activeEmail) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const list = await apiClient.getNotifications(activeEmail);
+      setNotifications(list);
+
+      // Automatically pop up new or action notifications with sound
+      if (!initialLoadDoneRef.current) {
+        list.forEach(n => knownNotificationIdsRef.current.add(n.id));
+        initialLoadDoneRef.current = true;
+        // If there is an unresolved action notification on load, pop it up
+        const pendingAction = list.find(n => !n.read && n.requiresAction);
+        if (pendingAction) {
+          setActivePopupNotification(pendingAction);
+        }
+      } else {
+        const newArrivals = list.filter(n => !knownNotificationIdsRef.current.has(n.id) && !n.read);
+        if (newArrivals.length > 0) {
+          newArrivals.forEach(n => knownNotificationIdsRef.current.add(n.id));
+          // Pop up the newest incoming alert with sound!
+          setActivePopupNotification(newArrivals[0]);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch notifications:', err);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     refreshAllData();
-  }, [searchQuery, selectedCategory, selectedType, selectedStatus, sortBy]);
+  }, [refreshAllData]);
+
+  useEffect(() => {
+    fetchUserNotifications();
+    const timer = setInterval(fetchUserNotifications, 5000); // Poll notifications every 5s for rapid alerts
+    return () => clearInterval(timer);
+  }, [fetchUserNotifications]);
 
   // Actions
   const handleOpenReportModal = (type: 'LOST' | 'FOUND') => {
-    if (!isLoggedIn) {
+    const stored = getStoredAuth();
+    const activeEmail = currentUser || stored?.email;
+
+    // Ask for login ONLY if user is not currently logged in or registered
+    if (!isLoggedIn && !activeEmail) {
       setAuthModalMode('login');
       setAuthModalOpen(true);
       return;
     }
+
+    if (!isLoggedIn && stored) {
+      setIsLoggedIn(true);
+      setCurrentUser(stored.email);
+      setCurrentUserName(stored.name);
+      setUserRole(stored.role);
+    }
+
     setReportModalType(type);
     setReportModalOpen(true);
   };
@@ -83,6 +154,7 @@ export const App: React.FC = () => {
   const handleCreateItem = async (newItem: Partial<Item>) => {
     await apiClient.createItem(newItem);
     await refreshAllData();
+    await fetchUserNotifications();
   };
 
   const handleDeleteItem = async (id: number) => {
@@ -94,10 +166,18 @@ export const App: React.FC = () => {
   };
 
   const handleInitiateClaim = (target: Item, relatedLostItem?: Item) => {
-    if (!isLoggedIn) {
+    const stored = getStoredAuth();
+    const activeEmail = currentUser || stored?.email;
+    if (!isLoggedIn && !activeEmail) {
       setAuthModalMode('login');
       setAuthModalOpen(true);
       return;
+    }
+    if (!isLoggedIn && stored) {
+      setIsLoggedIn(true);
+      setCurrentUser(stored.email);
+      setCurrentUserName(stored.name);
+      setUserRole(stored.role);
     }
     setClaimTargetItem(target);
     setClaimModalOpen(true);
@@ -113,6 +193,11 @@ export const App: React.FC = () => {
     setCurrentUserName(user.name);
     setUserRole(user.role);
     setIsLoggedIn(true);
+    try {
+      localStorage.setItem('lostfound_auth', JSON.stringify(user));
+    } catch (err) {
+      console.warn('Failed to store auth to localStorage:', err);
+    }
   };
 
   const handleLogout = () => {
@@ -120,14 +205,76 @@ export const App: React.FC = () => {
     setCurrentUser('');
     setCurrentUserName('');
     setUserRole('STUDENT');
+    setNotifications([]);
+    try {
+      localStorage.removeItem('lostfound_auth');
+    } catch (err) {
+      console.warn('Failed to clear auth from localStorage:', err);
+    }
     if (activeTab === 'activity' || activeTab === 'admin') {
       setActiveTab('directory');
     }
   };
 
+  // Notification Handlers
+  const handleMarkNotificationRead = async (id: number) => {
+    await apiClient.markNotificationRead(id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    if (!currentUser) return;
+    await apiClient.markAllNotificationsRead(currentUser);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const handleClearNotifications = async () => {
+    if (!currentUser) return;
+    await apiClient.clearNotifications(currentUser);
+    setNotifications([]);
+  };
+
+  const handleConfirmReceivedFromNotif = async (claimId: number) => {
+    if (!currentUser) return;
+    try {
+      await apiClient.confirmReceived(claimId, currentUser);
+      await refreshAllData();
+      await fetchUserNotifications();
+    } catch (err: any) {
+      alert(err.message || 'Failed to confirm item received');
+    }
+  };
+
+  const handleVerifyAndShare = async (
+    claimId: number,
+    isCorrect: boolean,
+    sharePhone: boolean,
+    shareEmail: boolean,
+    notes?: string
+  ) => {
+    if (!currentUser) return;
+    await apiClient.verifyAndShareClaim(claimId, currentUser, isCorrect, sharePhone, shareEmail, notes);
+    await refreshAllData();
+    await fetchUserNotifications();
+  };
+
+  const handleClaimantShareContact = async (
+    claimId: number,
+    shareContact: boolean,
+    sharePhone: boolean,
+    shareEmail: boolean
+  ) => {
+    if (!currentUser) return;
+    await apiClient.claimantShareContact(claimId, currentUser, shareContact, sharePhone, shareEmail);
+    await refreshAllData();
+    await fetchUserNotifications();
+  };
+
   const myLostReports = items.filter(
-    i => i.type === 'LOST' && i.reporterEmail && i.reporterEmail.toLowerCase() === currentUser.toLowerCase()
+    i => i.type === 'LOST' && i.reporterEmail && currentUser && i.reporterEmail.toLowerCase() === currentUser.toLowerCase()
   );
+
+  const unreadNotifCount = notifications.filter(n => !n.read).length;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
@@ -144,6 +291,8 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         pendingClaimsCount={pendingClaimsCount}
         matchesCount={matches.length}
+        unreadNotificationsCount={unreadNotifCount}
+        onOpenNotifications={() => setNotificationDrawerOpen(true)}
       />
 
       {/* Main Tab Content */}
@@ -170,7 +319,7 @@ export const App: React.FC = () => {
               sortBy={sortBy}
               setSortBy={setSortBy}
               onSelectItem={(item) => setInspectItem(item)}
-              onCheckMatches={(item) => {
+              onCheckMatches={() => {
                 setActiveTab('matches');
               }}
               onClaimItem={(item) => handleInitiateClaim(item)}
@@ -198,6 +347,7 @@ export const App: React.FC = () => {
               onEditItem={(item) => {
                 setInspectItem(item);
               }}
+              onOpenNotifications={() => setNotificationDrawerOpen(true)}
             />
           </div>
         )}
@@ -242,6 +392,7 @@ export const App: React.FC = () => {
         userLostReports={myLostReports}
         onClaimSubmitted={() => {
           refreshAllData();
+          fetchUserNotifications();
         }}
       />
 
@@ -250,6 +401,40 @@ export const App: React.FC = () => {
         initialMode={authModalMode}
         onClose={() => setAuthModalOpen(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      {/* Notification Records Drawer */}
+      <NotificationDrawer
+        isOpen={notificationDrawerOpen}
+        onClose={() => setNotificationDrawerOpen(false)}
+        notifications={notifications}
+        onMarkRead={handleMarkNotificationRead}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+        onClearAll={handleClearNotifications}
+        onConfirmReceived={handleConfirmReceivedFromNotif}
+        onOpenPopup={(notif) => {
+          setActivePopupNotification(notif);
+          setNotificationDrawerOpen(false);
+        }}
+        onNavigateToTab={(tab) => {
+          setActiveTab(tab);
+          setNotificationDrawerOpen(false);
+        }}
+        currentUser={currentUser}
+      />
+
+      {/* Live Notification Popup with Sound */}
+      <NotificationPopup
+        notification={activePopupNotification}
+        currentUserEmail={currentUser}
+        onClose={() => setActivePopupNotification(null)}
+        onVerifyAndShare={handleVerifyAndShare}
+        onClaimantShareContact={handleClaimantShareContact}
+        onConfirmReceived={handleConfirmReceivedFromNotif}
+        onNavigateToTab={(tab) => {
+          setActiveTab(tab);
+          setActivePopupNotification(null);
+        }}
       />
 
       {/* Production Clean Light Theme Footer */}
@@ -262,8 +447,9 @@ export const App: React.FC = () => {
         marginTop: 'auto'
       }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
-          <div>
-            <strong style={{ color: 'var(--text-primary)' }}>Lost &amp; Found</strong> — Official Campus Community Recovery Platform
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.png" alt="Lost & Found" style={{ height: 32, width: 'auto', display: 'block' }} />
+            <span>— Official Campus Community Recovery Platform</span>
           </div>
           <div>
             Campus Security &amp; Student Operations Desk • Privacy &amp; Trust Assured

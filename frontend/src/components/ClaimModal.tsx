@@ -45,11 +45,11 @@ export const ClaimModal: React.FC<ClaimModalProps> = ({
     try {
       await apiClient.submitClaim({
         itemId: targetItem.id,
+        matchedItemId: linkedLostItemId,
         claimantEmail: currentUserEmail,
         claimantName,
-        claimantPhone,
-        secretProof: secretProof.trim(),
-        linkedLostItemId
+        contactPhone: claimantPhone,
+        descriptionProof: secretProof.trim(),
       });
 
       setSuccessMsg('Your claim verification has been logged with Campus Security. You can monitor review progress under "My Activity".');

@@ -65,7 +65,7 @@ public class ItemController {
     public ResponseEntity<?> updateItem(
             @PathVariable int id,
             @RequestBody Item item,
-            @RequestParam(required = false, defaultValue = "alex.morgan@university.edu") String actorEmail) {
+            @RequestParam(required = false, defaultValue = "") String actorEmail) {
         item.setId(id);
         try {
             boolean updated = service.updateItem(item, actorEmail);
@@ -81,7 +81,7 @@ public class ItemController {
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<?> withdrawItem(
             @PathVariable int id,
-            @RequestParam(required = false, defaultValue = "alex.morgan@university.edu") String actorEmail) {
+            @RequestParam(required = false, defaultValue = "") String actorEmail) {
         try {
             boolean withdrawn = service.withdrawItem(id, actorEmail);
             if (!withdrawn) {

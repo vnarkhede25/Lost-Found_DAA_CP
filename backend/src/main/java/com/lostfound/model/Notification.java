@@ -16,6 +16,15 @@ public class Notification {
     private String contactPhone;
     private String actionUrl;
 
+    // Interactive verification & contact sharing fields
+    private boolean requiresAction = false;
+    private String actionType; // "VERIFY_CLAIM", "SHARE_CONTACT", "VIEW_MATCH"
+    private String proofText;
+    private boolean finderSharePhone = false;
+    private boolean finderShareEmail = false;
+    private boolean claimantSharePhone = false;
+    private boolean claimantShareEmail = false;
+
     public Notification() {
         this.read = false;
     }
@@ -71,4 +80,25 @@ public class Notification {
 
     public String getActionUrl() { return actionUrl; }
     public void setActionUrl(String actionUrl) { this.actionUrl = actionUrl; }
+
+    public boolean isRequiresAction() { return requiresAction; }
+    public void setRequiresAction(boolean requiresAction) { this.requiresAction = requiresAction; }
+
+    public String getActionType() { return actionType; }
+    public void setActionType(String actionType) { this.actionType = actionType; }
+
+    public String getProofText() { return proofText; }
+    public void setProofText(String proofText) { this.proofText = proofText; }
+
+    public boolean isFinderSharePhone() { return finderSharePhone; }
+    public void setFinderSharePhone(boolean finderSharePhone) { this.finderSharePhone = finderSharePhone; }
+
+    public boolean isFinderShareEmail() { return finderShareEmail; }
+    public void setFinderShareEmail(boolean finderShareEmail) { this.finderShareEmail = finderShareEmail; }
+
+    public boolean isClaimantSharePhone() { return claimantSharePhone; }
+    public void setClaimantSharePhone(boolean claimantSharePhone) { this.claimantSharePhone = claimantSharePhone; }
+
+    public boolean isClaimantShareEmail() { return claimantShareEmail; }
+    public void setClaimantShareEmail(boolean claimantShareEmail) { this.claimantShareEmail = claimantShareEmail; }
 }

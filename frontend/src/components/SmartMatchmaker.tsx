@@ -20,8 +20,8 @@ export const SmartMatchmaker: React.FC<SmartMatchmakerProps> = ({
   const displayedMatches = filterUserOnly
     ? matches.filter(
         (m) =>
-          (m.lostItem && m.lostItem.reporterEmail.toLowerCase() === currentUser.toLowerCase()) ||
-          (m.foundItem && m.foundItem.reporterEmail.toLowerCase() === currentUser.toLowerCase())
+          (m.lostItem?.reporterEmail && currentUser && m.lostItem.reporterEmail.toLowerCase() === currentUser.toLowerCase()) ||
+          (m.foundItem?.reporterEmail && currentUser && m.foundItem.reporterEmail.toLowerCase() === currentUser.toLowerCase())
       )
     : matches;
 

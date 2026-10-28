@@ -42,8 +42,40 @@ export interface Claim {
   adminEmail?: string;
   createdAt: string;
   resolvedAt?: string;
+  finderName?: string;
+  finderEmail?: string;
+  finderPhone?: string;
+  finderVerified?: boolean;
+  finderSharePhone?: boolean;
+  finderShareEmail?: boolean;
+  claimantSharePhone?: boolean;
+  claimantShareEmail?: boolean;
   item?: Item;
   matchedItem?: Item;
+}
+
+export interface Notification {
+  id: number;
+  recipientEmail: string;
+  title: string;
+  message: string;
+  type: 'MATCH_FOUND' | 'CLAIM_REQUESTED' | 'CLAIM_VERIFIED' | 'CLAIM_ACCEPTED' | 'CLAIM_REJECTED' | 'ITEM_RETURNED' | 'INFO';
+  createdAt: string;
+  read: boolean;
+  claimId?: number;
+  itemId?: number;
+  matchedItemId?: number;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  actionUrl?: string;
+  requiresAction?: boolean;
+  actionType?: 'VERIFY_CLAIM' | 'SHARE_CONTACT' | 'VIEW_MATCH';
+  proofText?: string;
+  finderSharePhone?: boolean;
+  finderShareEmail?: boolean;
+  claimantSharePhone?: boolean;
+  claimantShareEmail?: boolean;
 }
 
 export interface AuditLog {

@@ -19,6 +19,11 @@ public class Claim {
     private String finderName;
     private String finderEmail;
     private String finderPhone;
+    private boolean finderVerified = false;
+    private boolean finderSharePhone = false;
+    private boolean finderShareEmail = false;
+    private boolean claimantSharePhone = false;
+    private boolean claimantShareEmail = false;
 
     // Attached item snapshots for UI convenience
     private Item item;
@@ -95,4 +100,19 @@ public class Claim {
 
     public String getFinderPhone() { return finderPhone; }
     public void setFinderPhone(String finderPhone) { this.finderPhone = finderPhone; }
+
+    public boolean isFinderVerified() { return finderVerified; }
+    public void setFinderVerified(boolean finderVerified) { this.finderVerified = finderVerified; }
+
+    public boolean isFinderSharePhone() { return finderSharePhone; }
+    public void setFinderSharePhone(boolean finderSharePhone) { this.finderSharePhone = finderSharePhone; }
+
+    public boolean isFinderShareEmail() { return finderShareEmail; }
+    public void setFinderShareEmail(boolean finderShareEmail) { this.finderShareEmail = finderShareEmail; }
+
+    public boolean isClaimantSharePhone() { return claimantSharePhone; }
+    public void setClaimantSharePhone(boolean claimantSharePhone) { this.claimantSharePhone = claimantSharePhone; }
+
+    public boolean isClaimantShareEmail() { return claimantShareEmail; }
+    public void setClaimantShareEmail(boolean claimantShareEmail) { this.claimantShareEmail = claimantShareEmail; }
 }
